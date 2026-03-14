@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client'
 
+// Model Version: 2026-03-15-v1
 const prismaClientSingleton = () => {
   return new PrismaClient()
 }
