@@ -26,10 +26,10 @@ export default function Hero() {
             Start Building
           </Link>
           <Link
-            href="/test-db"
+            href="/client-login"
             className="w-full sm:w-auto px-6 py-3 rounded-xl bg-zinc-950 border border-zinc-800 text-zinc-300 text-sm font-medium hover:bg-zinc-900 transition-colors"
           >
-            Explore Database
+            Client Portal
           </Link>
         </div>
         

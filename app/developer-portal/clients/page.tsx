@@ -53,16 +53,21 @@ export default async function DeveloperClientsPage() {
                  </div>
 
                  <div className="pt-4 border-t border-zinc-900 flex flex-col gap-2">
-                    <div className="flex items-center justify-between group">
-                       <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Email</span>
-                       <span className="text-xs text-zinc-300 group-hover:text-white transition-colors">{client.email}</span>
+                    <div className="space-y-1.5">
+                       <span className="text-[10px] font-black text-zinc-600 uppercase tracking-widest block mb-2">Connective Channels</span>
+                       {client.emails.map((email: string, i: number) => (
+                           <div key={i} className="flex items-center justify-between group">
+                              <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.05em]">{i === 0 ? 'Primary' : `Alt ${i}`}</span>
+                              <span className="text-xs text-zinc-300 group-hover:text-white transition-colors truncate max-w-[160px]">{email}</span>
+                           </div>
+                       ))}
+                       {client.phones.map((phone: string, i: number) => (
+                           <div key={i} className="flex items-center justify-between group pt-1">
+                              <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.05em]">Line {i + 1}</span>
+                              <span className="text-xs text-zinc-300 group-hover:text-white transition-colors">{phone}</span>
+                           </div>
+                       ))}
                     </div>
-                    {client.phone && (
-                       <div className="flex items-center justify-between group">
-                          <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Phone</span>
-                          <span className="text-xs text-zinc-300 group-hover:text-white transition-colors">{client.phone}</span>
-                       </div>
-                    )}
                     {client.authorizedName && (
                        <div className="flex items-center justify-between group">
                           <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Auth Rep</span>

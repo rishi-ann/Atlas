@@ -60,11 +60,12 @@ model Client {
   id             String     @id @default(cuid())
   clientRef      String     @unique
   name           String
-  email          String
+  emails         String[]   @default([])
+  phones         String[]   @default([])
   company        String?
+  description    String?
   companyType    String?
   authorizedName String?
-  phone          String?
   address        String?
   developerId    String?
   developer      Developer? @relation(fields: [developerId], references: [id], onDelete: SetNull)

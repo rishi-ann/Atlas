@@ -2,6 +2,17 @@ import Link from 'next/link';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { prisma } from '../lib/prisma';
+import { 
+  BarChart3, 
+  Kanban, 
+  Code2, 
+  Users2, 
+  Quote, 
+  Settings2, 
+  MessageCircle, 
+  PhoneCall, 
+  LogOut 
+} from 'lucide-react';
 
 export default async function DeveloperLayout({
   children,
@@ -35,69 +46,79 @@ export default async function DeveloperLayout({
       {/* Sidebar Navbar */}
       <aside className="w-64 border-r border-white/5 bg-zinc-950/50 flex flex-col h-screen sticky top-0 z-20">
         <div className="h-20 flex items-center px-6 border-b border-white/5">
-          <Link href="/" className="inline-block group grayscale opacity-70 hover:grayscale-0 hover:opacity-100 transition-all duration-300">
+          <Link href="/" className="flex items-center gap-3 transition-opacity hover:opacity-80">
             <img
-              src="https://ik.imagekit.io/dypkhqxip/logo_atlas.png"
+              src="/icon.png"
               alt="Atlas Logo"
-              className="h-8 w-auto object-contain"
+              className="h-8 w-8 object-contain"
             />
+            <span className="text-lg font-bold tracking-tight text-white">Atlas</span>
           </Link>
         </div>
         
-        <div className="px-6 py-5 border-b border-white/5">
-          <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-semibold mb-1">Authenticated Developer</p>
-          <p className="text-sm font-medium text-white tracking-tight truncate flex items-center gap-2">
-             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-             {dev.name}
-          </p>
+        <div className="px-6 py-8 border-b border-white/5">
+          <div className="flex items-center gap-3 mb-1">
+            <div className="relative">
+              <div className="w-10 h-10 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center font-bold text-zinc-500 text-sm">
+                {dev.name.split(' ').map(n => n[0]).join('')}
+              </div>
+              <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border-2 border-black rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]"></span>
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-bold text-white truncate">{dev.name}</p>
+              <p className="text-[11px] text-zinc-500 font-medium">Internal Developer</p>
+            </div>
+          </div>
         </div>
 
-        <nav className="p-4 flex flex-col gap-2 flex-grow">
-          <div className="text-xs font-semibold text-zinc-500 uppercase tracking-widest pl-3 mt-4 mb-2">Workspace</div>
-          <Link href="/developer-portal" className="px-3 py-2.5 rounded-lg bg-white/5 text-white text-sm font-medium hover:bg-white/10 transition-colors flex items-center gap-3">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></span>
+        <nav className="p-4 flex flex-col gap-1 flex-grow overflow-y-auto custom-scrollbar">
+          <div className="text-[11px] font-bold text-zinc-600 px-3 mt-4 mb-2 tracking-wide">Workspace</div>
+          <Link href="/developer-portal" className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-white/5 text-white text-sm font-semibold transition-all">
+            <BarChart3 className="w-4 h-4 text-emerald-500" />
             Overview
           </Link>
-          <Link href="/developer-portal/board" className="px-3 py-2.5 rounded-lg text-zinc-400 text-sm font-medium hover:bg-white/5 hover:text-white transition-colors flex items-center gap-3">
-            <span className="w-2 h-2 rounded-full border border-zinc-600"></span>
+          <Link href="/developer-portal/board" className="group flex items-center gap-3 px-3 py-2.5 rounded-xl text-zinc-400 hover:text-white hover:bg-white/5 transition-all text-sm font-medium">
+            <Kanban className="w-4 h-4 text-zinc-500 group-hover:text-blue-500 transition-colors" />
             Task Kanban
           </Link>
-          <Link href="/developer-portal/playground" className="px-3 py-2.5 rounded-lg text-zinc-400 text-sm font-medium hover:bg-white/5 hover:text-white transition-colors flex items-center gap-3">
-            <span className="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]"></span>
-            Coding Playground
+          <Link href="/developer-portal/playground" className="group flex items-center gap-3 px-3 py-2.5 rounded-xl text-zinc-400 hover:text-white hover:bg-white/5 transition-all text-sm font-medium">
+            <Code2 className="w-4 h-4 text-zinc-500 group-hover:text-purple-500 transition-colors" />
+            Playground
           </Link>
-          <Link href="/developer-portal/clients" className="px-3 py-2.5 rounded-lg text-zinc-400 text-sm font-medium hover:bg-white/5 hover:text-white transition-colors flex items-center gap-3">
-            <span className="w-2 h-2 rounded-full border border-zinc-600"></span>
+          <Link href="/developer-portal/clients" className="group flex items-center gap-3 px-3 py-2.5 rounded-xl text-zinc-400 hover:text-white hover:bg-white/5 transition-all text-sm font-medium">
+            <Users2 className="w-4 h-4 text-zinc-500 group-hover:text-emerald-500 transition-colors" />
             Clients
           </Link>
-          <Link href="/developer-portal/quotes" className="px-3 py-2.5 rounded-lg text-zinc-400 text-sm font-medium hover:bg-white/5 hover:text-white transition-colors flex items-center gap-3">
-            <span className="w-2 h-2 rounded-full border border-zinc-600"></span>
-            Quote Generator
+          <Link href="/developer-portal/quotes" className="group flex items-center gap-3 px-3 py-2.5 rounded-xl text-zinc-400 hover:text-white hover:bg-white/5 transition-all text-sm font-medium">
+            <Quote className="w-4 h-4 text-zinc-500 group-hover:text-amber-500 transition-colors" />
+            Quotes
           </Link>
-          <Link href="/developer-portal/settings" className="px-3 py-2.5 rounded-lg text-zinc-400 text-sm font-medium hover:bg-white/5 hover:text-white transition-colors flex items-center gap-3">
-            <span className="w-2 h-2 rounded-full border border-zinc-600"></span>
-            Account Settings
+          <Link href="/developer-portal/settings" className="group flex items-center gap-3 px-3 py-2.5 rounded-xl text-zinc-400 hover:text-white hover:bg-white/5 transition-all text-sm font-medium">
+            <Settings2 className="w-4 h-4 text-zinc-500 group-hover:text-zinc-300 transition-colors" />
+            Settings
           </Link>
-          <div className="text-xs font-semibold text-zinc-500 uppercase tracking-widest pl-3 mt-4 mb-2">Team</div>
-          <Link href="/developer-portal/chat" className="px-3 py-2.5 rounded-lg text-zinc-400 text-sm font-medium hover:bg-white/5 hover:text-white transition-colors flex items-center gap-3">
-            <span className="w-2 h-2 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.5)]"></span>
+          
+          <div className="text-[11px] font-bold text-zinc-600 px-3 mt-6 mb-2 tracking-wide">Communication</div>
+          <Link href="/developer-portal/chat" className="group flex items-center gap-3 px-3 py-2.5 rounded-xl text-zinc-400 hover:text-white hover:bg-white/5 transition-all text-sm font-medium">
+            <MessageCircle className="w-4 h-4 text-zinc-500 group-hover:text-rose-500 transition-colors" />
             Dev Chat
           </Link>
-          <Link href="/developer-portal/calls" className="px-3 py-2.5 rounded-lg text-zinc-400 text-sm font-medium hover:bg-white/5 hover:text-white transition-colors flex items-center gap-3">
-            <span className="w-2 h-2 rounded-full border border-zinc-600"></span>
+          <Link href="/developer-portal/calls" className="group flex items-center gap-3 px-3 py-2.5 rounded-xl text-zinc-400 hover:text-white hover:bg-white/5 transition-all text-sm font-medium">
+            <PhoneCall className="w-4 h-4 text-zinc-500 group-hover:text-orange-500 transition-colors" />
             Call History
           </Link>
         </nav>
         
-        <div className="p-4 border-t border-white/5">
+        <div className="p-4 mt-auto border-t border-white/5">
           <form action={async () => {
             'use server';
             const cookieStore = await cookies();
             cookieStore.delete('dev_token');
             redirect('/dev-login');
           }}>
-            <button type="submit" className="w-full text-center px-3 py-2.5 rounded-lg bg-zinc-900 border border-zinc-800 hover:border-red-900/50 hover:bg-red-950/20 hover:text-red-400 text-zinc-400 transition-colors text-sm font-semibold shadow-sm">
-              Log out
+            <button type="submit" className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-zinc-500 hover:text-red-400 hover:bg-red-500/5 transition-all text-sm font-semibold group">
+              <LogOut className="w-4 h-4 group-hover:rotate-12 transition-transform" />
+              Sign out
             </button>
           </form>
         </div>
