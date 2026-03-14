@@ -6,7 +6,7 @@ export async function GET(req: Request) {
   const limit = parseInt(searchParams.get('limit') || '50');
   
   try {
-    const logs = await prisma.atlasLog.findMany({
+    const logs = await (prisma as any).atlasLog.findMany({
       orderBy: { createdAt: 'desc' },
       take: limit,
     });
@@ -24,7 +24,7 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json();
-    const log = await prisma.atlasLog.create({
+    const log = await (prisma as any).atlasLog.create({
       data: {
         level: body.level || 'info',
         category: body.category,

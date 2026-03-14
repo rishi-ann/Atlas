@@ -10,7 +10,7 @@ export default function Navbar() {
             <img
               src="https://ik.imagekit.io/dypkhqxip/logo_atlas.png"
               alt="Atlas Logo"
-              className="h-8 w-auto object-contain grayscale opacity-90 hover:opacity-100 hover:grayscale-0 transition-all"
+              className="h-8 w-auto object-contain opacity-90 hover:opacity-100 transition-all"
             />
           </Link>
 
