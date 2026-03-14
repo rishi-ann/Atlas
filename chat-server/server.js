@@ -30,12 +30,12 @@ const callTimers = new Map();  // roomId -> startTime
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
-async function saveMessage(senderId, senderName, content, receiverId = null, channel = 'all') {
+async function saveMessage(senderId, senderName, content, receiverId = null, channel = 'all', fileUrl = null, fileType = null, fileName = null) {
   try {
     await fetch(`${APP_URL}/api/chat/messages`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-internal-secret": INTERNAL_SECRET },
-      body: JSON.stringify({ senderId, senderName, content, receiverId, channel }),
+      body: JSON.stringify({ senderId, senderName, content, receiverId, channel, fileUrl, fileType, fileName }),
     });
   } catch (e) {
     console.error("[Atlas] Failed to save message:", e.message);
@@ -90,6 +90,9 @@ io.on("connection", (socket) => {
       text: data.text,
       channel: data.channel || 'all',
       receiverId: data.receiverId || null,
+      fileUrl: data.fileUrl || null,
+      fileType: data.fileType || null,
+      fileName: data.fileName || null,
       timestamp: new Date().toISOString(),
     };
 
@@ -101,13 +104,13 @@ io.on("connection", (socket) => {
       }
       // Send it back to the sender
       socket.emit("receive_message", message);
-      await saveMessage(id, name, data.text, data.receiverId, "direct");
-      console.log(`[Chat] DM ${name} -> ${data.receiverId}: ${data.text}`);
+      await saveMessage(id, name, data.text, data.receiverId, "direct", data.fileUrl, data.fileType, data.fileName);
+      console.log(`[Chat] DM ${name} -> ${data.receiverId}: ${data.text || '[File]'}`);
     } else {
       // Broadcast to channel (e.g. 'all' or 'admin')
       io.emit("receive_message", message);
-      await saveMessage(id, name, data.text, null, message.channel);
-      console.log(`[Chat] ${name} [${message.channel}]: ${data.text}`);
+      await saveMessage(id, name, data.text, null, message.channel, data.fileUrl, data.fileType, data.fileName);
+      console.log(`[Chat] ${name} [${message.channel}]: ${data.text || '[File]'}`);
     }
   });
 
@@ -120,6 +123,9 @@ io.on("connection", (socket) => {
       text: data.text,
       channel: data.channel || 'admin',
       receiverId: data.receiverId || null,
+      fileUrl: data.fileUrl || null,
+      fileType: data.fileType || null,
+      fileName: data.fileName || null,
       timestamp: new Date().toISOString(),
     };
 
@@ -128,12 +134,12 @@ io.on("connection", (socket) => {
       if (targetSocketId) {
         io.to(targetSocketId).emit("receive_message", message);
       }
-      await saveMessage('admin', 'System Admin', data.text, data.receiverId, "direct");
+      await saveMessage('admin', 'System Admin', data.text, data.receiverId, "direct", data.fileUrl, data.fileType, data.fileName);
     } else {
       io.emit("receive_message", message);
-      await saveMessage('admin', 'System Admin', data.text, null, message.channel);
+      await saveMessage('admin', 'System Admin', data.text, null, message.channel, data.fileUrl, data.fileType, data.fileName);
     }
-    console.log(`[Chat] Admin -> ${data.receiverId || message.channel}: ${data.text}`);
+    console.log(`[Chat] Admin -> ${data.receiverId || message.channel}: ${data.text || '[File]'}`);
   });
 
   socket.on("typing", () => socket.broadcast.emit("developer_typing", { id, name }));
