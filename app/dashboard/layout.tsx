@@ -54,10 +54,6 @@ export default async function DashboardLayout({
             <UserPlus2 className="w-4 h-4 text-zinc-500 group-hover:text-purple-500 transition-colors" />
             Developer Requests
           </Link>
-          <Link href="/dashboard/chat" className="group flex items-center gap-3 px-3 py-2.5 rounded-xl text-zinc-400 hover:text-white hover:bg-white/5 transition-all text-sm font-medium">
-            <MessageSquare className="w-4 h-4 text-zinc-500 group-hover:text-rose-500 transition-colors" />
-            Internal Messaging
-          </Link>
           <Link href="/dashboard/settings" className="group flex items-center gap-3 px-3 py-2.5 rounded-xl text-zinc-400 hover:text-white hover:bg-white/5 transition-all text-sm font-medium">
             <Settings2 className="w-4 h-4 text-zinc-500 group-hover:text-zinc-300 transition-colors" />
             Platform Settings

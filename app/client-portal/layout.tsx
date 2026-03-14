@@ -68,10 +68,6 @@ export default async function ClientPortalLayout({
             Dashboard
           </Link>
           
-          <Link href="/client-portal/collaboration" className="group flex items-center gap-3 px-4 py-2.5 rounded-xl text-zinc-400 hover:text-white hover:bg-zinc-900/50 transition-all text-sm font-medium">
-            <MessageSquare className="w-4 h-4 text-zinc-500 group-hover:text-blue-400 transition-colors" />
-            Collaboration
-          </Link>
 
           <Link href="/client-portal/files" className="group flex items-center gap-3 px-4 py-2.5 rounded-xl text-zinc-400 hover:text-white hover:bg-zinc-900/50 transition-all text-sm font-medium">
             <Files className="w-4 h-4 text-zinc-500 group-hover:text-emerald-400 transition-colors" />
