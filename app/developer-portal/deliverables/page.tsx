@@ -13,13 +13,14 @@ export default async function DeveloperDeliverablesPage() {
     where: { developerId: devToken.value },
     include: {
       deliverables: {
-        include: { client: true },
         orderBy: { createdAt: 'desc' }
       }
     }
   });
 
-  const deliverables = clientsWithDeliverables.flatMap(c => c.deliverables);
+  const deliverables = clientsWithDeliverables.flatMap(c =>
+    c.deliverables.map(d => ({ ...d, clientName: c.name }))
+  );
 
   const getIcon = (type: string) => {
     switch (type) {
@@ -73,7 +74,7 @@ export default async function DeveloperDeliverablesPage() {
                         <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-tighter">Origin</span>
                     </div>
                     <span className="text-[10px] font-black text-blue-500 bg-blue-500/5 border border-blue-500/10 px-2 py-0.5 rounded uppercase tracking-widest">
-                        {file.client.name}
+                        {file.clientName}
                     </span>
                   </div>
 
