@@ -203,7 +203,7 @@ io.on("connection", (socket) => {
   });
 });
 
-const PORT = process.env.CHAT_PORT || 4001;
+const PORT = process.env.PORT || process.env.CHAT_PORT || 4001;
 server.listen(PORT, () => {
   console.log(`[Atlas Chat+Call] Server running on port ${PORT}`);
 });

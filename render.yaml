@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: atlas-chat-server
+    runtime: node
+    rootDir: chat-server
+    buildCommand: npm install
+    startCommand: node server.js
+    plan: free
+    envVars:
+      - key: CHAT_JWT_SECRET
+        sync: false
+      - key: INTERNAL_API_SECRET
+        sync: false
+      - key: NEXT_PUBLIC_APP_URL
+        sync: false
+      - key: CHAT_PORT
+        value: "10000"
