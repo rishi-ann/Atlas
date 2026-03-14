@@ -61,3 +61,15 @@ export async function rejectDeveloper(id: string) {
     console.error('Failed to reject developer:', err);
   }
 }
+
+export async function deleteDeveloper(id: string) {
+  try {
+    await prisma.developer.delete({
+      where: { id },
+    });
+
+    revalidatePath('/dashboard/developers');
+  } catch (err) {
+    console.error('Failed to delete developer:', err);
+  }
+}

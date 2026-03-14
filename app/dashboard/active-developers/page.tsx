@@ -1,4 +1,5 @@
 import { prisma } from '../../lib/prisma';
+import { deleteDeveloper } from '../developers/actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -190,9 +191,16 @@ function DevCard({
         </div>
       </div>
 
-      <div className="flex items-center justify-between">
-        <span className="text-[9px] font-bold text-zinc-600 uppercase tracking-widest">Last Seen</span>
-        <span className={`text-[10px] font-semibold font-mono ${statusConfig.text}`}>{timeLabel}</span>
+      <div className="flex items-center justify-between mt-1">
+        <div className="flex items-center gap-2">
+          <span className="text-[9px] font-bold text-zinc-600 uppercase tracking-widest">Last Seen</span>
+          <span className={`text-[10px] font-semibold font-mono ${statusConfig.text}`}>{timeLabel}</span>
+        </div>
+        <form action={deleteDeveloper.bind(null, dev.id)}>
+          <button type="submit" className="text-red-400 hover:text-red-300 font-medium text-[10px] border border-zinc-900 bg-zinc-950 hover:bg-zinc-900 px-3 py-1.5 rounded-lg transition-colors shadow-sm">
+            Delete Access
+          </button>
+        </form>
       </div>
     </div>
   );

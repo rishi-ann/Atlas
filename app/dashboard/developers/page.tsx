@@ -1,6 +1,6 @@
 import React from 'react';
 import { prisma } from '../../lib/prisma';
-import { approveDeveloper, rejectDeveloper } from './actions';
+import { approveDeveloper, rejectDeveloper, deleteDeveloper } from './actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -78,6 +78,7 @@ export default async function DevelopersDashboard() {
                   <th scope="col" className="px-6 py-4">Email</th>
                   <th scope="col" className="px-6 py-4">Status</th>
                   <th scope="col" className="px-6 py-4">Active Since</th>
+                  <th scope="col" className="px-6 py-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -93,6 +94,13 @@ export default async function DevelopersDashboard() {
                       </span>
                     </td>
                     <td className="px-6 py-4 font-mono text-[10px]">{new Date(dev.updatedAt).toLocaleDateString()}</td>
+                    <td className="px-6 py-4 text-right">
+                      <form action={deleteDeveloper.bind(null, dev.id)}>
+                        <button type="submit" className="text-red-400 hover:text-red-300 font-medium text-xs border border-zinc-800 bg-zinc-900 hover:bg-zinc-800 px-3 py-1.5 rounded-lg transition-colors">
+                          Delete
+                        </button>
+                      </form>
+                    </td>
                   </tr>
                 ))}
               </tbody>
