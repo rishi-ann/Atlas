@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { io, Socket } from 'socket.io-client';
 import { createTask, moveTask, deleteTask } from './actions';
 
 type Task = {
@@ -10,13 +11,21 @@ type Task = {
   status: string;
 };
 
-export default function KanbanClient({ initialTasks }: { initialTasks: Task[] }) {
+export default function KanbanClient({ initialTasks, token }: { initialTasks: Task[], token: string }) {
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
+  const socketRef = useRef<Socket | null>(null);
 
-  React.useEffect(() => {
+  useEffect(() => {
     setTasks(initialTasks);
   }, [initialTasks]);
+
+  useEffect(() => {
+    const CHAT_URL = process.env.NEXT_PUBLIC_CHAT_SERVER_URL || 'http://localhost:4001';
+    const socket = io(CHAT_URL, { auth: { token }, transports: ['websocket', 'polling'] });
+    socketRef.current = socket;
+    return () => { socket.disconnect(); };
+  }, [token]);
   
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -46,6 +55,10 @@ export default function KanbanClient({ initialTasks }: { initialTasks: Task[] })
     
     // Server action
     await moveTask(draggedTaskId, newStatus);
+    const task = tasks.find(t => t.id === draggedTaskId);
+    if (task && socketRef.current) {
+      socketRef.current.emit('task_update', { title: task.title, action: 'moved' });
+    }
     setDraggedTaskId(null);
   };
 
@@ -72,9 +85,9 @@ export default function KanbanClient({ initialTasks }: { initialTasks: Task[] })
       setTasks(prev => prev.filter(t => t.id !== tempId));
       alert(res.error);
     } else {
-      // Wait for server to revalidate or refetch, but UI is already updated optimistically 
-      // Next JS router refresh happens automatically via revalidatePath, but we might get double render if we don't manage it closely
-      // In this setup, revalidatePath will refresh the server props on next network cycle
+      if (socketRef.current) {
+        socketRef.current.emit('task_update', { title: newTask.title, action: 'created' });
+      }
     }
   };
 
