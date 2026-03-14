@@ -1,19 +1,12 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { 
-  GithubIcon, 
-  TerminalIcon, 
   SearchIcon, 
   FilterIcon,
-  ChevronRightIcon,
   ClockIcon,
   ShieldCheckIcon,
-  ActivityIcon,
-  CheckCircle2Icon,
-  AlertCircleIcon
 } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
 import Navbar from '../../components/Navbar';
 
 type SystemLog = {
@@ -55,7 +48,6 @@ export default function StatusClient({
   const [logs, setLogs] = useState<SystemLog[]>(initialLogs);
   const [commits, setCommits] = useState<GitCommit[]>(initialCommits);
   const [health, setHealth] = useState<HealthStatus>(initialHealth);
-  const [activeTab, setActiveTab] = useState<'logs' | 'commits'>('logs');
 
   useEffect(() => {
     const interval = setInterval(async () => {
@@ -75,6 +67,21 @@ export default function StatusClient({
     return () => clearInterval(interval);
   }, []);
 
+  // Merge and sort logs and commits into a unified feed
+  const unifiedFeed = useMemo(() => {
+    const gitLogs: SystemLog[] = commits.map(c => ({
+      id: c.hash,
+      level: 'success',
+      category: 'git',
+      message: `${c.message} (${c.hash}) by ${c.author}`,
+      metadata: { hash: c.hash, author: c.author },
+      createdAt: new Date(c.timestamp).toISOString()
+    }));
+
+    const merged = [...logs, ...gitLogs];
+    return merged.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [logs, commits]);
+
   const getLevelStyles = (level: string) => {
     switch (level) {
       case 'success': return 'text-emerald-400';
@@ -85,12 +92,12 @@ export default function StatusClient({
   };
 
   return (
-    <div className="min-h-screen bg-[#000] text-[#fff] font-mono selection:bg-[#333] flex flex-col">
+    <div className="min-h-screen bg-[#000] text-[#fff] font-mono selection:bg-[#333] flex flex-col overflow-hidden">
       <Navbar />
       
       {/* Vercel-style deployment header */}
-      <div className="border-b border-[#333] bg-[#000]">
-        <div className="max-w-[1400px] mx-auto px-6 py-6 space-y-6">
+      <div className="border-b border-[#111] bg-[#000]">
+        <div className="max-w-[1400px] mx-auto px-6 py-6 font-sans">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-center gap-4">
               <div className="w-10 h-10 rounded-full bg-[#111] border border-[#333] flex items-center justify-center">
@@ -98,140 +105,95 @@ export default function StatusClient({
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <h1 className="text-xl font-semibold tracking-tight">Atlas Production</h1>
-                  <span className="px-2 py-0.5 rounded-full bg-[#111] border border-[#333] text-[10px] uppercase font-bold text-[#888]">
-                    main
+                  <h1 className="text-lg font-semibold tracking-tight">Deployment Logs</h1>
+                  <span className="px-1.5 py-0.5 rounded-md bg-[#111] border border-[#333] text-[9px] uppercase font-black text-[#666]">
+                    production
                   </span>
                 </div>
-                <div className="flex items-center gap-3 text-sm text-[#888] mt-1 font-sans">
+                <div className="flex items-center gap-3 text-[11px] text-[#666] mt-0.5">
                   <span className="flex items-center gap-1.5">
-                    <div className={`w-2 h-2 rounded-full ${health.status === 'operational' ? 'bg-[#50e3c2]' : 'bg-[#e00]'} shadow-[0_0_8px_rgba(80,227,194,0.4)]`} />
-                    {health.status === 'operational' ? 'Operational' : 'Degraded'}
+                    <div className={`w-1.5 h-1.5 rounded-full ${health.status === 'operational' ? 'bg-[#50e3c2]' : 'bg-[#e00]'}`} />
+                    {health.status === 'operational' ? 'Operational' : 'Issues'}
                   </span>
                   <span>•</span>
-                  <span>v1.0.4</span>
-                  <span>•</span>
                   <span>{new Date(health.timestamp).toLocaleTimeString()}</span>
+                  <span>•</span>
+                  <span>Atlas v1.0.4</span>
                 </div>
               </div>
             </div>
-
-            <div className="flex items-center gap-2 font-sans">
-              <button className="px-4 py-1.5 rounded-md bg-[#fff] text-[#000] text-sm font-medium hover:bg-[#ccc] transition-colors">
+            
+            <div className="flex items-center gap-2">
+              <div className="h-6 w-px bg-[#333] hidden md:block" />
+              <button className="text-[11px] text-[#888] hover:text-white transition-colors uppercase tracking-widest font-black">
                 Redeploy
               </button>
-              <button className="px-3 py-1.5 rounded-md border border-[#333] text-sm font-medium hover:bg-[#111] transition-colors">
-                ...
-              </button>
             </div>
-          </div>
-
-          {/* Vercel Tabs */}
-          <div className="flex items-center border-b border-transparent font-sans">
-            <button 
-              onClick={() => setActiveTab('logs')}
-              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === 'logs' ? 'border-white text-white' : 'border-transparent text-[#888] hover:text-white'}`}
-            >
-              Runtime Logs
-            </button>
-            <button 
-              onClick={() => setActiveTab('commits')}
-              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === 'commits' ? 'border-white text-white' : 'border-transparent text-[#888] hover:text-white'}`}
-            >
-              Git History
-            </button>
           </div>
         </div>
       </div>
 
-      <main className="flex-grow flex flex-col bg-[#000]">
+      <main className="flex-grow flex flex-col bg-[#000] overflow-hidden">
         <div className="max-w-[1400px] mx-auto w-full flex-grow flex flex-col px-6">
           
-          {/* Vercel Search/Filter Bar */}
-          <div className="flex items-center gap-2 py-4 border-b border-[#111]">
-            <div className="relative flex-1">
-              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-[#666]" size={14} />
-              <input 
-                type="text" 
-                placeholder="Search logs..." 
-                className="w-full bg-transparent border-none outline-none pl-9 text-sm text-white placeholder-[#666] h-8"
-              />
-            </div>
-            <div className="h-4 w-px bg-[#333] mx-2" />
-            <button className="flex items-center gap-2 text-[#888] hover:text-white text-sm px-2">
-              <FilterIcon size={14} />
+          {/* Minimal Search bar */}
+          <div className="flex items-center gap-2 py-3 border-b border-[#111]">
+            <SearchIcon className="text-[#333]" size={12} />
+            <input 
+              type="text" 
+              placeholder="Query deployment logs..." 
+              className="flex-1 bg-transparent border-none outline-none text-xs text-white placeholder-[#333] h-6"
+            />
+            <button className="flex items-center gap-2 text-[#444] hover:text-white text-[10px] font-bold uppercase tracking-widest px-2">
+              <FilterIcon size={12} />
               <span>Filter</span>
             </button>
           </div>
 
-          {/* Real-time Log Engine Look */}
-          <div className="flex-grow overflow-auto py-4 font-mono text-xs leading-relaxed">
-            {activeTab === 'logs' ? (
-              <div className="space-y-0.5">
-                {logs.map((log) => (
-                  <div key={log.id} className="group flex gap-4 hover:bg-[#111] px-2 py-0.5 rounded transition-colors border-l-2 border-transparent hover:border-[#333]">
-                    <span className="text-[#444] shrink-0 w-24">
-                      {new Date(log.createdAt).toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })}.{(new Date(log.createdAt).getMilliseconds()).toString().padStart(3, '0')}
-                    </span>
-                    <span className={`shrink-0 w-16 uppercase font-bold ${getLevelStyles(log.level)}`}>
-                      [{log.level}]
-                    </span>
-                    <span className="text-[#888] shrink-0 w-20">[{log.category}]</span>
-                    <span className="text-zinc-300 break-all">{log.message}</span>
-                  </div>
-                ))}
-                {logs.length === 0 && (
-                  <div className="py-20 text-center text-[#444] animate-pulse">
-                    READY AND WAITING FOR LOGS...
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="space-y-4 font-sans">
-                {commits.map((commit) => (
-                  <div key={commit.hash} className="p-4 bg-[#0a0a0a] border border-[#111] rounded-lg hover:border-[#333] transition-all group">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-3">
-                        <GithubIcon size={18} className="text-[#888]" />
-                        <div>
-                          <p className="text-sm font-medium text-white group-hover:text-blue-400 transition-colors uppercase tracking-tight">
-                            {commit.message}
-                          </p>
-                          <div className="flex items-center gap-2 text-xs text-[#666] mt-1">
-                            <span className="font-mono bg-[#111] px-1.5 py-0.5 rounded border border-[#333]">{commit.hash}</span>
-                            <span>•</span>
-                            <span className="font-semibold text-[#888]">{commit.author}</span>
-                            <span>•</span>
-                            <span>{formatDistanceToNow(new Date(commit.timestamp))} ago</span>
-                          </div>
-                        </div>
-                      </div>
-                      <ChevronRightIcon size={16} className="text-[#333] group-hover:text-white transition-all transform group-hover:translate-x-1" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+          {/* Unified Terminal Feed */}
+          <div className="flex-grow overflow-auto py-6 font-mono text-[11px] leading-[1.8]">
+            <div className="space-y-0.5">
+              {unifiedFeed.map((log) => (
+                <div key={log.id} className="group flex gap-4 hover:bg-[#111] px-2 py-0.25 transition-all">
+                  <span className="text-[#444] shrink-0 w-24">
+                    {new Date(log.createdAt).toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })}.{(new Date(log.createdAt).getMilliseconds()).toString().padStart(3, '0')}
+                  </span>
+                  <span className={`shrink-0 w-16 uppercase font-bold ${getLevelStyles(log.level)}`}>
+                    [{log.level}]
+                  </span>
+                  <span className="text-[#666] shrink-0 w-20">[{log.category}]</span>
+                  <span className="text-zinc-300 break-all select-text cursor-text">
+                    {log.message}
+                  </span>
+                </div>
+              ))}
+              {unifiedFeed.length === 0 && (
+                <div className="py-20 text-center text-[#222] font-black tracking-widest uppercase italic">
+                  &gt; Initializing Log Engine...
+                </div>
+              )}
+              {/* Bottom padding for auto-scroll feel */}
+              <div className="h-20" />
+            </div>
           </div>
         </div>
       </main>
 
       {/* Vercel Status Bar Footer */}
-      <footer className="border-t border-[#333] bg-[#000] px-6 py-2">
-        <div className="max-w-[1400px] mx-auto flex items-center justify-between text-[10px] text-[#666] font-sans">
+      <footer className="border-t border-[#111] bg-[#000] px-6 py-2">
+        <div className="max-w-[1400px] mx-auto flex items-center justify-between text-[10px] text-[#444] font-sans">
           <div className="flex items-center gap-4">
             <span className="flex items-center gap-1.5">
-              <div className="w-1.5 h-1.5 rounded-full bg-[#50e3c2]" />
-              Real-time feed connected
+              <div className="w-1 h-1 rounded-full bg-[#50e3c2] animate-pulse" />
+              Connected to arn1
             </span>
             <span className="flex items-center gap-1.5">
               <ClockIcon size={10} />
-              Latency: 14ms
+              12ms Engine Latency
             </span>
           </div>
           <div className="flex items-center gap-4">
-            <span>Region: ARN1</span>
-            <span className="text-white">Powered by Atlas Core</span>
+            <span className="text-[#888] font-black uppercase tracking-widest">Atlas Live Platform</span>
           </div>
         </div>
       </footer>
