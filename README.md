@@ -4,7 +4,7 @@
 
 <h1>Atlas</h1>
 
-<p>Internal developer operations platform for the Redlix ecosystem. Manage clients, projects, developer access, real-time communication, and audit logging from a unified interface.</p>
+<p>Internal developer operations platform for the Redlix ecosystem. Manage clients, projects, developer access, real-time communication, and collaborative coding from a unified interface.</p>
 
 <br />
 
@@ -31,6 +31,8 @@
 | ORM | Prisma v6 | Type-safe database access, schema management and migrations |
 | Runtime | Node.js | JavaScript runtime for server-side execution |
 | Real-time Chat | Socket.io | WebSocket-based real-time messaging between developers |
+| Code Editor | Monaco Editor | VS Code-like coding experience in the browser |
+| Terminal | xterm.js & node-pty | Fully interactive terminal shell for remote command execution |
 | Video Calling | WebRTC | Peer-to-peer video and audio communication |
 | Authentication | JWT (jsonwebtoken) | Token-based authentication for the chat and video server |
 | Session Auth | HTTP-only Cookies | Secure session management for Developer, Admin and Super Admin portals |
@@ -40,25 +42,26 @@
 
 ## Features
 
-### Super Admin Portal
-- Client management with full company profile (name, email, company type, authorized representative, phone, address)
-- Developer account approval and rejection
-- Platform-wide audit log viewer
+### Developer Playground (Collaborative IDE)
+- **Real-time Code Sync**: Multiple developers can edit the same files simultaneously with Monaco Editor.
+- **Interactive Terminal**: Execute commands, run scripts, and manage environments directly from the dashboard via `node-pty`.
+- **File System Manager**: Full folder tree exploration, create/delete files, and manage your project structure.
+- **Bulk Folder Import**: Upload entire project folders from your computer directly into the playground workspace.
 
-### Admin (Servers) Dashboard
-- Real-time audit feed from developer activity
-- Project analytics and monitoring
-- Active developer session tracking with online/offline presence
-- Developer request management
+### Real-time Monitoring & Status
+- **Vercel-style Log Engine**: unified, monospace feed for all platform updates and git commits.
+- **Deployment Tracking**: Live GitHub commit history integration.
+- **System Health Monitor**: Real-time status of API, Database, and Chat infrastructure.
 
-### Developer Portal
-- Personal task board (Kanban-style)
-- Client directory with assigned client records
-- Quote generator
-- Real-time team chat channel with message history
-- Video calling with accept/reject popup, mute/camera controls, call duration tracking
-- Invite link system for joining video calls
-- Call history with status, direction, and duration
+### Team Communication
+- **Real-time Chat**: Group channels and direct messaging with file/attachment support.
+- **Integrated Video Calls**: Peer-to-peer video calling with screen sharing and call history.
+- **Unified Presence**: Live tracking of approval developers and their active status.
+
+### Administration & Operations
+- **Super Admin**: Client management and developer vetting.
+- **Infrastructure Admin**: Audit feed monitoring and project analytics.
+- **Task Management**: Kanban-style project boards for approved developers.
 
 ---
 
@@ -95,7 +98,7 @@ npm run dev
 
 Runs on [http://localhost:3000](http://localhost:3000)
 
-### Chat and Video Call Server
+### Chat, Playground, and Terminal Server
 
 ```bash
 npm run chat:dev
@@ -105,63 +108,28 @@ Runs on [http://localhost:4001](http://localhost:4001)
 
 ---
 
-## Environment Variables
-
-| Variable | Description |
-|---|---|
-| `DATABASE_URL` | Supabase PostgreSQL connection string (pooled, pgBouncer) |
-| `DIRECT_URL` | Supabase PostgreSQL direct connection string |
-| `ADMIN_USERNAME` | Username for the Infrastructure Admin login |
-| `ADMIN_PASSWORD` | Password for the Infrastructure Admin login |
-| `SUPERADMIN_USERNAME` | Username for the Super Admin login |
-| `SUPERADMIN_PASSWORD` | Password for the Super Admin login |
-| `CHAT_JWT_SECRET` | Secret key used to sign and verify developer chat tokens |
-| `NEXT_PUBLIC_CHAT_SERVER_URL` | Public URL of the Socket.io chat server (default: `http://localhost:4001`) |
-| `INTERNAL_API_SECRET` | Shared secret for internal server-to-server API calls |
-| `NEXT_PUBLIC_APP_URL` | Public URL of the Next.js application (default: `http://localhost:3000`) |
-
----
-
 ## Project Structure
 
 ```
 atlas/
 ├── app/
 │   ├── api/                    # API route handlers
-│   │   ├── chat/messages/      # Chat history read/write
-│   │   └── calls/log/          # Call log read/write
-│   ├── dashboard/              # Admin (Servers) portal
-│   │   ├── active-developers/  # Real-time developer session monitor
-│   │   ├── developers/         # Developer approval management
-│   │   ├── logs/               # Audit log viewer
-│   │   └── projects/           # Project analytics
+│   │   ├── system/logs/        # Vercel-style logging system
+│   │   └── playground/         # File system operations
 │   ├── developer-portal/       # Developer workspace
-│   │   ├── board/              # Task Kanban
-│   │   ├── calls/              # Call history
-│   │   ├── chat/               # Real-time team chat and video calls
-│   │   ├── clients/            # Assigned client directory
-│   │   ├── quotes/             # Quote generator
-│   │   └── video/[roomId]/     # Video call invite join page
-│   ├── super-admin/            # Super Admin portal
-│   │   └── clients/            # Client management
+│   │   ├── playground/         # Collaborative IDE and Terminal
+│   │   ├── chat/               # Real-time team communication
+│   │   └── board/              # Task Kanban
+│   ├── status/                 # Public Platform Status page
+│   ├── dashboard/              # Admin (Servers) portal
 │   └── lib/
 │       └── prisma.ts           # Prisma client singleton
 ├── chat-server/
-│   └── server.js               # Socket.io server for chat and video signaling
+│   └── server.js               # Socket.io, Terminal (PTY), and IDE orchestration
 ├── prisma/
-│   └── schema.prisma           # Database schema
-└── components/                 # Shared UI components
+│   └── schema.prisma           # Database schema with Audit and System Logs
+└── workspace/                  # Default root for Playground projects
 ```
-
----
-
-## Portals and Access
-
-| Portal | Route | Access Method |
-|---|---|---|
-| Infrastructure Admin | `/login` | Username and password |
-| Super Admin | `/super-admin-login` | Username and password |
-| Developer | `/dev-login` | Registered email (approved accounts only) |
 
 ---
 
