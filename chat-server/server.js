@@ -173,6 +173,11 @@ io.on("connection", (socket) => {
   socket.on("typing", () => socket.broadcast.emit("developer_typing", { id, name }));
   socket.on("stop_typing", () => socket.broadcast.emit("developer_stop_typing", { id }));
 
+  // Task events
+  socket.on("task_update", (data) => {
+    socket.broadcast.emit("task_notification", { ...data, senderName: name });
+  });
+
   // ── Video Call Signaling ──────────────────────────────────────────────────
 
   socket.on("call_request", async ({ targetId, roomId }) => {
@@ -230,10 +235,15 @@ io.on("connection", (socket) => {
     socket.join(roomId);
     if (!videoRooms.has(roomId)) videoRooms.set(roomId, []);
     const room = videoRooms.get(roomId);
-    room.push({ id, name, socketId: socket.id });
+    
+    // Fix: Ensure we don't add the same socket multiple times
+    if (!room.find(p => p.socketId === socket.id)) {
+      room.push({ id, name, socketId: socket.id });
+    }
+    
     if (!callTimers.has(roomId)) callTimers.set(roomId, Date.now());
     socket.to(roomId).emit("peer_joined", { peerId: id, peerName: name, peerSocketId: socket.id });
-    socket.emit("existing_peers", room.filter(p => p.id !== id));
+    socket.emit("existing_peers", room.filter(p => p.socketId !== socket.id));
   });
 
   socket.on("webrtc_offer", ({ targetSocketId, offer, roomId }) => {

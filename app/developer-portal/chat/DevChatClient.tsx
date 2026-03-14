@@ -116,9 +116,18 @@ export default function DevChatClient({
         }
       }));
 
-      // Update unread count if not in active channel
-      if ((msg.channel === 'direct' && channelKey !== activeChannel) || (msg.channel !== 'direct' && msg.channel !== activeChannel)) {
-        if (msg.senderId !== developer.id) {
+      // Notifications
+      if (msg.senderId !== developer.id) {
+        // Browser notification
+        if (Notification.permission === 'granted') {
+          new Notification(msg.senderName, {
+            body: msg.text || 'Sent an attachment',
+            icon: 'https://ik.imagekit.io/dypkhqxip/logo_atlas.png'
+          });
+        }
+        
+        // Update unread count if not in active channel
+        if ((msg.channel === 'direct' && channelKey !== activeChannel) || (msg.channel !== 'direct' && msg.channel !== activeChannel)) {
           setUnreadCounts(prev => ({
             ...prev,
             [channelKey]: (prev[channelKey] || 0) + 1
@@ -131,7 +140,13 @@ export default function DevChatClient({
     socket.on('developer_stop_typing', (user: { id: string }) => setTypingUsers(prev => prev.filter(u => u.id !== user.id)));
 
     // Call events
-    socket.on('incoming_call', (data: IncomingCall) => { setIncomingCall(data); });
+    socket.on('incoming_call', (data: IncomingCall) => { 
+      setIncomingCall(data);
+      // Play system sound if possible or show alert
+      if (Notification.permission === 'granted') {
+        new Notification('Incoming Video Call', { body: `${data.callerName} is calling you.` });
+      }
+    });
     socket.on('call_accepted_ack', ({ roomId }: any) => { setActiveRoomId(roomId); setInCall(true); });
     socket.on('call_rejected_ack', ({ rejectorName }: any) => {
       setCallToast(`${rejectorName} declined the call.`);
@@ -141,6 +156,20 @@ export default function DevChatClient({
       setCallToast(reason);
       setTimeout(() => setCallToast(null), 3500);
     });
+
+    socket.on('task_notification', (data: any) => {
+      if (Notification.permission === 'granted') {
+        new Notification('Task Update', { 
+          body: `${data.senderName} updated task: ${data.title}`,
+          icon: 'https://ik.imagekit.io/dypkhqxip/logo_atlas.png'
+        });
+      }
+    });
+
+    // Request notification permission
+    if (Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
 
     return () => { socket.disconnect(); };
   }, [token, activeChannel, developer.id]);
@@ -461,8 +490,14 @@ export default function DevChatClient({
                         <span className="text-[9px] text-zinc-600">{formatTime(msg.timestamp)}</span>
                       </div>
                     )}
-                    <div className={`px-3.5 py-2 rounded-2xl text-sm leading-relaxed ${isOwn ? 'bg-rose-500 text-white rounded-br-sm' : 'bg-zinc-900 border border-zinc-800/80 text-zinc-100 rounded-bl-sm'}`}>
-                      {msg.text && <div>{msg.text}</div>}
+                    <div className={`px-3.5 py-2 rounded-2xl text-sm leading-relaxed ${isOwn ? 'bg-rose-500 text-white rounded-br-sm' : 'bg-zinc-900 border border-zinc-800/80 text-zinc-100 rounded-bl-sm'} ${msg.text?.includes(`@${developer.name.split(' ')[0]}`) ? 'ring-2 ring-rose-500 ring-offset-2 ring-offset-zinc-950' : ''}`}>
+                      {msg.text && (
+                        <div>
+                          {msg.text.split(/(@\w+)/g).map((part, idx) => 
+                            part.startsWith('@') ? <span key={idx} className="font-bold text-white bg-white/10 px-1 rounded">{part}</span> : part
+                          )}
+                        </div>
+                      )}
                       {msg.fileUrl && (
                         <div className={msg.text ? 'mt-3' : ''}>
                           {msg.fileType === 'image' && (

@@ -18,6 +18,6 @@ export default async function KanbanBoardPage() {
   });
 
   return (
-    <KanbanClient initialTasks={tasks} />
+    <KanbanClient initialTasks={tasks} token={devToken.value} />
   );
 }
