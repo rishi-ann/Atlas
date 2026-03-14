@@ -12,7 +12,11 @@ const INTERNAL_SECRET = process.env.INTERNAL_API_SECRET || "atlas-internal-secre
 
 const io = new Server(server, {
   cors: {
-    origin: ["http://localhost:3000", "http://localhost:3001"],
+    origin: [
+      "http://localhost:3000",
+      "http://localhost:3001",
+      process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+    ].filter(Boolean),
     methods: ["GET", "POST"],
     credentials: true,
   },
