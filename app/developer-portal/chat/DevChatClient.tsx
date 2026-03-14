@@ -37,6 +37,8 @@ export default function DevChatClient({
   const [typingUsers, setTypingUsers] = useState<SocketUser[]>([]);
   const [activeChannel, setActiveChannel] = useState<string>('all');
   const [uploading, setUploading] = useState(false);
+  const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
+  const [lastMessages, setLastMessages] = useState<Record<string, { text: string; timestamp: string }>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Call state
@@ -69,6 +71,22 @@ export default function DevChatClient({
             timestamp: m.createdAt,
           }));
           setMessages(historical);
+          
+          // Calculate initial last messages
+          const lasts: Record<string, { text: string; timestamp: string }> = {};
+          historical.forEach(m => {
+            const key = m.channel === 'direct' 
+              ? (m.senderId === developer.id ? m.receiverId! : m.senderId)
+              : m.channel || 'all';
+            
+            if (!lasts[key] || new Date(m.timestamp) > new Date(lasts[key].timestamp)) {
+              lasts[key] = { 
+                text: m.text || (m.fileUrl ? (m.fileType === 'image' ? '📷 Image' : m.fileType === 'video' ? '🎥 Video' : '📄 File') : ''), 
+                timestamp: m.timestamp 
+              };
+            }
+          });
+          setLastMessages(lasts);
         }
       })
       .catch(() => {})
@@ -82,7 +100,32 @@ export default function DevChatClient({
 
     socket.on('connect', () => setConnected(true));
     socket.on('disconnect', () => { setConnected(false); setChatOnlineIds(new Set()); });
-    socket.on('receive_message', (msg: Message) => setMessages(prev => [...prev, msg]));
+    socket.on('receive_message', (msg: Message) => {
+      setMessages(prev => [...prev, msg]);
+      
+      const channelKey = msg.channel === 'direct' 
+        ? (msg.senderId === developer.id ? msg.receiverId! : msg.senderId)
+        : msg.channel || 'all';
+
+      // Update last message
+      setLastMessages(prev => ({
+        ...prev,
+        [channelKey]: { 
+          text: msg.text || (msg.fileUrl ? (msg.fileType === 'image' ? '📷 Image' : msg.fileType === 'video' ? '🎥 Video' : '📄 File') : ''), 
+          timestamp: msg.timestamp 
+        }
+      }));
+
+      // Update unread count if not in active channel
+      if ((msg.channel === 'direct' && channelKey !== activeChannel) || (msg.channel !== 'direct' && msg.channel !== activeChannel)) {
+        if (msg.senderId !== developer.id) {
+          setUnreadCounts(prev => ({
+            ...prev,
+            [channelKey]: (prev[channelKey] || 0) + 1
+          }));
+        }
+      }
+    });
     socket.on('online_users', (users: SocketUser[]) => setChatOnlineIds(new Set(users.map(u => u.id))));
     socket.on('developer_typing', (user: SocketUser) => setTypingUsers(prev => prev.find(u => u.id === user.id) ? prev : [...prev, user]));
     socket.on('developer_stop_typing', (user: { id: string }) => setTypingUsers(prev => prev.filter(u => u.id !== user.id)));
@@ -100,7 +143,19 @@ export default function DevChatClient({
     });
 
     return () => { socket.disconnect(); };
-  }, [token]);
+  }, [token, activeChannel, developer.id]);
+
+  useEffect(() => {
+    // Clear unread count when switching to a channel
+    if (activeChannel) {
+      setUnreadCounts(prev => {
+        if (!prev[activeChannel]) return prev;
+        const next = { ...prev };
+        delete next[activeChannel];
+        return next;
+      });
+    }
+  }, [activeChannel]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -249,56 +304,85 @@ export default function DevChatClient({
           <div className="p-4 border-b border-zinc-900">
             <h3 className="text-xs font-bold text-zinc-400 mb-3 tracking-tight">Channels</h3>
             <div className="flex flex-col gap-1.5 mb-4">
-              <button 
-                onClick={() => setActiveChannel('all')} 
-                className={`flex items-center justify-between px-2 py-1.5 rounded-lg transition-colors ${activeChannel === 'all' ? 'bg-zinc-800 text-white' : 'text-zinc-400 hover:bg-zinc-900'}`}
-              >
-                <span className="text-xs font-semibold"># atlas-dev-lounge</span>
-              </button>
-              <button 
-                onClick={() => setActiveChannel('admin')} 
-                className={`flex items-center justify-between px-2 py-1.5 rounded-lg transition-colors ${activeChannel === 'admin' ? 'bg-zinc-800 text-white' : 'text-zinc-400 hover:bg-zinc-900'}`}
-              >
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-semibold"># admin-announcements</span>
+                <button 
+                  onClick={() => setActiveChannel('all')} 
+                  className={`flex items-center justify-between px-2 py-1.5 rounded-lg transition-colors group ${activeChannel === 'all' ? 'bg-zinc-800 text-white' : 'text-zinc-400 hover:bg-zinc-900'}`}
+                >
+                  <div className="flex flex-col items-start min-w-0 flex-1">
+                    <span className="text-xs font-semibold"># atlas-dev-lounge</span>
+                    {lastMessages['all'] && (
+                      <span className="text-[10px] text-zinc-500 truncate w-full">{lastMessages['all'].text}</span>
+                    )}
+                  </div>
+                  {unreadCounts['all'] > 0 && (
+                    <span className="ml-2 px-1.5 py-0.5 rounded-full bg-rose-500 text-[9px] font-black text-white shrink-0">
+                      {unreadCounts['all']}
+                    </span>
+                  )}
+                </button>
+                <button 
+                  onClick={() => setActiveChannel('admin')} 
+                  className={`flex items-center justify-between px-2 py-1.5 rounded-lg transition-colors group ${activeChannel === 'admin' ? 'bg-zinc-800 text-white' : 'text-zinc-400 hover:bg-zinc-900'}`}
+                >
+                  <div className="flex flex-col items-start min-w-0 flex-1">
+                    <span className="text-xs font-semibold"># admin-announcements</span>
+                    {lastMessages['admin'] && (
+                      <span className="text-[10px] text-zinc-500 truncate w-full">{lastMessages['admin'].text}</span>
+                    )}
+                  </div>
+                  {unreadCounts['admin'] > 0 && (
+                    <span className="ml-2 px-1.5 py-0.5 rounded-full bg-rose-500 text-[9px] font-black text-white shrink-0">
+                      {unreadCounts['admin']}
+                    </span>
+                  )}
+                </button>
+              </div>
+              <h3 className="text-xs font-bold text-zinc-400 mb-3 tracking-tight">Direct Messages</h3>
+              <div className="flex flex-col gap-1.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span className="text-[10px] font-semibold text-zinc-400">In Chat</span>
+                  </div>
+                  <span className="text-[10px] font-mono font-bold text-emerald-500">{chatOnlineIds.size}</span>
                 </div>
-              </button>
-            </div>
-            <h3 className="text-xs font-bold text-zinc-400 mb-3 tracking-tight">Direct Messages</h3>
-            <div className="flex flex-col gap-1.5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                  <span className="text-[10px] font-semibold text-zinc-400">In Chat</span>
-                </div>
-                <span className="text-[10px] font-mono font-bold text-emerald-500">{chatOnlineIds.size}</span>
               </div>
             </div>
-          </div>
-
-          <div className="flex-1 overflow-y-auto py-2 px-2">
-            {sortedDevs.map(dev => {
-              const inChat = chatOnlineIds.has(dev.id);
-              const isSelf = dev.id === developer.id;
-              const dotColor = inChat ? 'bg-emerald-500 animate-pulse' : dev.isPortalActive ? 'bg-amber-500' : 'bg-zinc-700';
-              const statusLabel = isSelf ? 'You' : inChat ? 'In Chat' : dev.isPortalActive ? 'Active' : 'Offline';
-
-              return (
-                <div 
-                  key={dev.id} 
-                  onClick={() => !isSelf && setActiveChannel(dev.id)}
-                  className={`group flex items-center gap-3 px-2 py-2 rounded-xl transition-colors ${isSelf ? 'opacity-50 cursor-default' : 'cursor-pointer'} ${activeChannel === dev.id ? 'bg-zinc-800' : 'hover:bg-zinc-900/60'}`}
-                >
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-black text-white shrink-0" style={{ backgroundColor: colorForName(dev.name) }}>
-                    {getInitials(dev.name)}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className={`text-xs font-semibold leading-tight truncate ${activeChannel === dev.id ? 'text-white' : 'text-zinc-200'}`}>{dev.name}</p>
-                    <div className="flex items-center gap-1 mt-0.5">
-                      <span className={`w-1.5 h-1.5 rounded-full ${dotColor} shrink-0`}></span>
-                      <span className={`text-[9px] font-bold ${inChat ? 'text-emerald-500' : dev.isPortalActive ? 'text-amber-500' : 'text-zinc-600'}`}>{statusLabel}</span>
+  
+            <div className="flex-1 overflow-y-auto py-2 px-2">
+              {sortedDevs.map(dev => {
+                const inChat = chatOnlineIds.has(dev.id);
+                const isSelf = dev.id === developer.id;
+                const dotColor = inChat ? 'bg-emerald-500 animate-pulse' : dev.isPortalActive ? 'bg-amber-500' : 'bg-zinc-700';
+                const statusLabel = isSelf ? 'You' : inChat ? 'In Chat' : dev.isPortalActive ? 'Active' : 'Offline';
+  
+                return (
+                  <div 
+                    key={dev.id} 
+                    onClick={() => !isSelf && setActiveChannel(dev.id)}
+                    className={`group flex items-center gap-3 px-2 py-2 rounded-xl transition-colors ${isSelf ? 'opacity-50 cursor-default' : 'cursor-pointer'} ${activeChannel === dev.id ? 'bg-zinc-800' : 'hover:bg-zinc-900/60'}`}
+                  >
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-black text-white shrink-0" style={{ backgroundColor: colorForName(dev.name) }}>
+                      {getInitials(dev.name)}
                     </div>
-                  </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className={`text-xs font-semibold leading-tight truncate ${activeChannel === dev.id ? 'text-white' : 'text-zinc-200'}`}>{dev.name}</p>
+                        {unreadCounts[dev.id] > 0 && (
+                          <span className="px-1.5 py-0.5 rounded-full bg-rose-500 text-[9px] font-black text-white shrink-0">
+                            {unreadCounts[dev.id]}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center justify-between gap-2 mt-0.5">
+                        <div className="flex items-center gap-1 min-w-0 flex-1">
+                          <span className={`w-1 h-1 rounded-full ${dotColor} shrink-0`}></span>
+                          <span className="text-[10px] text-zinc-500 truncate min-w-0">
+                            {lastMessages[dev.id] ? lastMessages[dev.id].text : statusLabel}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
 
                   {/* Video Call Button — visible on hover, hidden for self */}
                   {!isSelf && (
