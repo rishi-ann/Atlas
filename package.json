@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "chat:dev": "cd chat-server && npm run dev",
-    "chat:start": "cd chat-server && node server.js"
+    "chat:start": "cd chat-server && node server.js",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@prisma/client": "^6.19.2",
