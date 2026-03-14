@@ -23,6 +23,12 @@ export default async function DeveloperLayout({
     redirect('/dev-login');
   }
 
+  // Ping to mark developer as recently active
+  await prisma.developer.update({
+    where: { id: devToken.value },
+    data: { lastSeenAt: new Date() }
+  });
+
   return (
     <div className="flex min-h-screen bg-black text-white font-sans selection:bg-zinc-800">
       

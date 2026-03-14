@@ -56,6 +56,12 @@ export async function devLogin(formData: FormData) {
     }
 
     if (dev.status === 'approved') {
+      // Update lastSeenAt to now
+      await prisma.developer.update({
+        where: { id: dev.id },
+        data: { lastSeenAt: new Date() }
+      });
+
       // Set secure HTTP-only cookie
       const cookieStore = await cookies();
       cookieStore.set('dev_token', dev.id, {

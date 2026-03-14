@@ -32,16 +32,17 @@ model Project {
 }
 
 model Developer {
-  id        String   @id @default(cuid())
-  name      String
-  email     String   @unique
-  reason    String
-  status    String   @default("pending")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  tasks     Task[]
-  clients   Client[]
-  logs      AuditLog[]
+  id          String    @id @default(cuid())
+  name        String
+  email       String    @unique
+  reason      String
+  status      String    @default("pending")
+  lastSeenAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  tasks       Task[]
+  clients     Client[]
+  logs        AuditLog[]
 }
 
 model Task {
