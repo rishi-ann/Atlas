@@ -34,6 +34,27 @@ export default function DevChatClient({
   const socketRef = useRef<Socket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [historyLoaded, setHistoryLoaded] = useState(false);
+
+  // Load chat history from DB on mount
+  useEffect(() => {
+    fetch('/api/chat/messages?limit=100')
+      .then(r => r.json())
+      .then((data: any[]) => {
+        if (Array.isArray(data)) {
+          const historical: Message[] = data.map(m => ({
+            id: m.id,
+            senderId: m.senderId,
+            senderName: m.senderName,
+            text: m.content,
+            timestamp: m.createdAt,
+          }));
+          setMessages(historical);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setHistoryLoaded(true));
+  }, []);
 
   useEffect(() => {
     const CHAT_URL = process.env.NEXT_PUBLIC_CHAT_SERVER_URL || 'http://localhost:4001';

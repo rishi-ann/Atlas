@@ -81,3 +81,23 @@ model AuditLog {
   createdAt   DateTime @default(now())
 }
 
+model ChatMessage {
+  id          String   @id @default(cuid())
+  content     String
+  senderId    String
+  senderName  String
+  createdAt   DateTime @default(now())
+}
+
+model CallLog {
+  id           String   @id @default(cuid())
+  roomId       String
+  callerId     String
+  callerName   String
+  receiverId   String?
+  receiverName String?
+  status       String   @default("initiated") // initiated | accepted | rejected | missed | ended
+  startedAt    DateTime @default(now())
+  endedAt      DateTime?
+  durationSecs Int?
+}

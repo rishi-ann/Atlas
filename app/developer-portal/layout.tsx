@@ -79,6 +79,10 @@ export default async function DeveloperLayout({
             <span className="w-2 h-2 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.5)]"></span>
             Dev Chat
           </Link>
+          <Link href="/developer-portal/calls" className="px-3 py-2.5 rounded-lg text-zinc-400 text-sm font-medium hover:bg-white/5 hover:text-white transition-colors flex items-center gap-3">
+            <span className="w-2 h-2 rounded-full border border-zinc-600"></span>
+            Call History
+          </Link>
         </nav>
         
         <div className="p-4 border-t border-white/5">
