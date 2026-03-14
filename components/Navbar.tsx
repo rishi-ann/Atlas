@@ -21,6 +21,9 @@ export default function Navbar() {
             <Link href="https://github.com/Redlix-Servers/Atlas" className="text-sm font-medium text-zinc-400 hover:text-white transition-colors">
               GitHub
             </Link>
+            <Link href="/status" className="text-sm font-medium text-zinc-400 hover:text-white transition-colors">
+              Platform Status
+            </Link>
           </div>
         </div>
 

@@ -67,6 +67,20 @@ async function logCall(action, data) {
   }
 }
 
+async function broadcastSystemLog(level, category, message, metadata = {}) {
+  const logData = { level, category, message, metadata, createdAt: new Date().toISOString() };
+  io.emit("system_update", logData);
+  try {
+    await fetch(`${APP_URL}/api/system/logs`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-internal-secret": INTERNAL_SECRET },
+      body: JSON.stringify(logData),
+    });
+  } catch (e) {
+    console.error("[Atlas] Failed to push system log:", e.message);
+  }
+}
+
 // ── Auth ───────────────────────────────────────────────────────────────────
 
 io.use((socket, next) => {
@@ -92,6 +106,7 @@ io.on("connection", (socket) => {
 
   io.emit("online_users", Array.from(onlineUsers.values()));
   socket.broadcast.emit("developer_joined", { id, name });
+  broadcastSystemLog("success", "user", `${name} joined the platform workspace`);
 
   // ── Chat ─────────────────────────────────────────────────────────────────
 

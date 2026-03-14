@@ -106,3 +106,12 @@ model CallLog {
   endedAt      DateTime?
   durationSecs Int?
 }
+
+model SystemLog {
+  id        String   @id @default(cuid())
+  level     String   @default("info") // info | warn | error | success
+  category  String   // git | server | user | dashboard
+  message   String
+  metadata  Json?    // For commit SHAs, user IDs, etc.
+  createdAt DateTime @default(now())
+}

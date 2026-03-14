@@ -16,6 +16,7 @@
     "@prisma/client": "^6.19.2",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/pg": "^8.18.0",
+    "date-fns": "^4.1.0",
     "jsonwebtoken": "^9.0.3",
     "lucide-react": "^0.577.0",
     "next": "16.1.6",
