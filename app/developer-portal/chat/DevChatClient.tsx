@@ -5,7 +5,7 @@ import { io, Socket } from 'socket.io-client';
 import VideoCallModal from './VideoCallModal';
 import IncomingCallPopup from './IncomingCallPopup';
 
-type Message = { id: string; senderId: string; senderName: string; text: string; timestamp: string; };
+type Message = { id: string; senderId: string; senderName: string; text: string; timestamp: string; channel?: string; receiverId?: string | null; };
 type PortalDev = { id: string; name: string; email: string; isPortalActive: boolean; };
 type SocketUser = { id: string; name: string; };
 type IncomingCall = { callerId: string; callerName: string; roomId: string; };
@@ -24,6 +24,7 @@ export default function DevChatClient({
   const [input, setInput] = useState('');
   const [connected, setConnected] = useState(false);
   const [typingUsers, setTypingUsers] = useState<SocketUser[]>([]);
+  const [activeChannel, setActiveChannel] = useState<string>('all');
 
   // Call state
   const [inCall, setInCall] = useState(false);
@@ -38,7 +39,7 @@ export default function DevChatClient({
 
   // Load chat history from DB on mount
   useEffect(() => {
-    fetch('/api/chat/messages?limit=100')
+    fetch(`/api/chat/messages?limit=100&userId=${developer.id}`)
       .then(r => r.json())
       .then((data: any[]) => {
         if (Array.isArray(data)) {
@@ -47,6 +48,8 @@ export default function DevChatClient({
             senderId: m.senderId,
             senderName: m.senderName,
             text: m.content,
+            channel: m.channel,
+            receiverId: m.receiverId,
             timestamp: m.createdAt,
           }));
           setMessages(historical);
@@ -54,7 +57,7 @@ export default function DevChatClient({
       })
       .catch(() => {})
       .finally(() => setHistoryLoaded(true));
-  }, []);
+  }, [developer.id]);
 
   useEffect(() => {
     const CHAT_URL = process.env.NEXT_PUBLIC_CHAT_SERVER_URL || 'http://localhost:4001';
@@ -89,7 +92,15 @@ export default function DevChatClient({
 
   const sendMessage = () => {
     if (!input.trim() || !socketRef.current) return;
-    socketRef.current.emit('send_message', { text: input.trim() });
+    
+    const isDirect = activeChannel !== 'all' && activeChannel !== 'admin';
+    
+    socketRef.current.emit('send_message', { 
+      text: input.trim(),
+      channel: isDirect ? 'direct' : activeChannel,
+      receiverId: isDirect ? activeChannel : null,
+    });
+    
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     socketRef.current.emit('stop_typing');
     setInput('');
@@ -141,6 +152,18 @@ export default function DevChatClient({
     return a.name.localeCompare(b.name);
   });
 
+  const filteredMessages = messages.filter(msg => {
+    if (activeChannel === 'all') return msg.channel === 'all' || !msg.channel;
+    if (activeChannel === 'admin') return msg.channel === 'admin';
+    return msg.channel === 'direct' && ((msg.senderId === activeChannel && msg.receiverId === developer.id) || (msg.senderId === developer.id && msg.receiverId === activeChannel));
+  });
+
+  const getChannelName = () => {
+    if (activeChannel === 'all') return '#atlas-dev-lounge';
+    if (activeChannel === 'admin') return '#admin-announcements';
+    return `#dm-${allDevelopers.find(d => d.id === activeChannel)?.name || 'Unknown'}`;
+  };
+
   return (
     <>
       {/* Incoming call popup */}
@@ -169,7 +192,24 @@ export default function DevChatClient({
         {/* Sidebar */}
         <div className="w-64 shrink-0 bg-zinc-950 border border-zinc-900 rounded-2xl flex flex-col overflow-hidden">
           <div className="p-4 border-b border-zinc-900">
-            <h3 className="text-xs font-bold text-zinc-400 mb-3 tracking-tight">Team Directory</h3>
+            <h3 className="text-xs font-bold text-zinc-400 mb-3 tracking-tight">Channels</h3>
+            <div className="flex flex-col gap-1.5 mb-4">
+              <button 
+                onClick={() => setActiveChannel('all')} 
+                className={`flex items-center justify-between px-2 py-1.5 rounded-lg transition-colors ${activeChannel === 'all' ? 'bg-zinc-800 text-white' : 'text-zinc-400 hover:bg-zinc-900'}`}
+              >
+                <span className="text-xs font-semibold"># atlas-dev-lounge</span>
+              </button>
+              <button 
+                onClick={() => setActiveChannel('admin')} 
+                className={`flex items-center justify-between px-2 py-1.5 rounded-lg transition-colors ${activeChannel === 'admin' ? 'bg-zinc-800 text-white' : 'text-zinc-400 hover:bg-zinc-900'}`}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold"># admin-announcements</span>
+                </div>
+              </button>
+            </div>
+            <h3 className="text-xs font-bold text-zinc-400 mb-3 tracking-tight">Direct Messages</h3>
             <div className="flex flex-col gap-1.5">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -178,17 +218,10 @@ export default function DevChatClient({
                 </div>
                 <span className="text-[10px] font-mono font-bold text-emerald-500">{chatOnlineIds.size}</span>
               </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-amber-500"></span>
-                  <span className="text-[10px] font-semibold text-zinc-400">In Portal</span>
-                </div>
-                <span className="text-[10px] font-mono font-bold text-amber-500">{allDevelopers.filter(d => d.isPortalActive).length}</span>
-              </div>
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto py-2">
+          <div className="flex-1 overflow-y-auto py-2 px-2">
             {sortedDevs.map(dev => {
               const inChat = chatOnlineIds.has(dev.id);
               const isSelf = dev.id === developer.id;
@@ -196,12 +229,16 @@ export default function DevChatClient({
               const statusLabel = isSelf ? 'You' : inChat ? 'In Chat' : dev.isPortalActive ? 'Active' : 'Offline';
 
               return (
-                <div key={dev.id} className={`group flex items-center gap-3 mx-2 px-2 py-2 rounded-xl ${isSelf ? 'bg-zinc-900/70' : 'hover:bg-zinc-900/40'} transition-colors`}>
+                <div 
+                  key={dev.id} 
+                  onClick={() => !isSelf && setActiveChannel(dev.id)}
+                  className={`group flex items-center gap-3 px-2 py-2 rounded-xl transition-colors ${isSelf ? 'opacity-50 cursor-default' : 'cursor-pointer'} ${activeChannel === dev.id ? 'bg-zinc-800' : 'hover:bg-zinc-900/60'}`}
+                >
                   <div className="w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-black text-white shrink-0" style={{ backgroundColor: colorForName(dev.name) }}>
                     {getInitials(dev.name)}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold text-zinc-200 leading-tight truncate">{dev.name}</p>
+                    <p className={`text-xs font-semibold leading-tight truncate ${activeChannel === dev.id ? 'text-white' : 'text-zinc-200'}`}>{dev.name}</p>
                     <div className="flex items-center gap-1 mt-0.5">
                       <span className={`w-1.5 h-1.5 rounded-full ${dotColor} shrink-0`}></span>
                       <span className={`text-[9px] font-bold ${inChat ? 'text-emerald-500' : dev.isPortalActive ? 'text-amber-500' : 'text-zinc-600'}`}>{statusLabel}</span>
@@ -239,26 +276,38 @@ export default function DevChatClient({
             <div>
               <h2 className="text-base font-semibold text-white tracking-tight flex items-center gap-2">
                 <svg className="w-4 h-4 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" /></svg>
-                #atlas-dev-lounge
+                {getChannelName()}
               </h2>
-              <p className="text-[10px] text-zinc-500">Hover a developer → click 📹 to call · {allDevelopers.length} members</p>
+              <p className="text-[10px] text-zinc-500">
+                {activeChannel === 'all' && `Hover a developer → click 📹 to call · ${allDevelopers.length} members`}
+                {activeChannel === 'admin' && `System announcements and updates from Server Admin.`}
+                {activeChannel !== 'all' && activeChannel !== 'admin' && `Direct message with ${allDevelopers.find(d => d.id === activeChannel)?.name}`}
+              </p>
             </div>
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-900 border border-zinc-800">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-              <span className="text-[10px] font-bold text-zinc-400">{chatOnlineIds.size} in chat</span>
-            </div>
+            {activeChannel === 'all' && (
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-900 border border-zinc-800">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span className="text-[10px] font-bold text-zinc-400">{chatOnlineIds.size} in chat</span>
+              </div>
+            )}
+            {activeChannel !== 'all' && activeChannel !== 'admin' && (
+              <button onClick={() => startCall(activeChannel)} className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-rose-500/10 text-rose-500 border border-rose-500/20 hover:bg-rose-500 hover:text-white transition-colors">
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.069A1 1 0 0121 8.82v6.36a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                <span className="text-[10px] font-bold">Start Call</span>
+              </button>
+            )}
           </div>
 
           <div className="flex-1 overflow-y-auto px-6 py-4 space-y-1">
-            {messages.length === 0 && (
+            {filteredMessages.length === 0 && (
               <div className="flex flex-col items-center justify-center h-full gap-3 opacity-30">
                 <svg className="w-10 h-10 text-zinc-700" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
-                <p className="text-xs text-zinc-600 font-medium">No messages yet. Say hi to the team!</p>
+                <p className="text-xs text-zinc-600 font-medium">No messages yet. Send a message to start the conversation!</p>
               </div>
             )}
-            {messages.map((msg, i) => {
+            {filteredMessages.map((msg, i) => {
               const isOwn = msg.senderId === developer.id;
-              const showHeader = i === 0 || messages[i - 1].senderId !== msg.senderId;
+              const showHeader = i === 0 || filteredMessages[i - 1].senderId !== msg.senderId;
               return (
                 <div key={msg.id} className={`flex gap-3 ${isOwn ? 'flex-row-reverse' : ''} ${showHeader ? 'mt-4' : 'mt-0.5'}`}>
                   {showHeader ? (
@@ -300,8 +349,8 @@ export default function DevChatClient({
                 value={input}
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder={connected ? `Message #atlas-dev-lounge...` : 'Connecting to chat server...'}
-                disabled={!connected}
+                placeholder={connected ? `Message ${getChannelName()}...` : 'Connecting to chat server...'}
+                disabled={!connected || activeChannel === 'admin'}
                 className="flex-1 bg-transparent text-sm text-white placeholder-zinc-600 outline-none disabled:opacity-40"
               />
               <button

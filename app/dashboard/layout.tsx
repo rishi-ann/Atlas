@@ -40,6 +40,10 @@ export default async function DashboardLayout({
             <span className="w-2 h-2 rounded-full border border-zinc-600"></span>
             Developer Requests
           </Link>
+          <Link href="/dashboard/chat" className="px-3 py-2.5 rounded-lg text-zinc-400 text-sm font-medium hover:bg-white/5 hover:text-white transition-colors flex items-center gap-3">
+            <span className="w-2 h-2 rounded-full border border-zinc-600"></span>
+            Internal Messaging
+          </Link>
           <Link href="/dashboard/settings" className="px-3 py-2.5 rounded-lg text-zinc-400 text-sm font-medium hover:bg-white/5 hover:text-white transition-colors flex items-center gap-3">
             <span className="w-2 h-2 rounded-full border border-zinc-600"></span>
             Platform Settings

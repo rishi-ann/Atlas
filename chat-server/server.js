@@ -30,12 +30,12 @@ const callTimers = new Map();  // roomId -> startTime
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
-async function saveMessage(senderId, senderName, content) {
+async function saveMessage(senderId, senderName, content, receiverId = null, channel = 'all') {
   try {
     await fetch(`${APP_URL}/api/chat/messages`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-internal-secret": INTERNAL_SECRET },
-      body: JSON.stringify({ senderId, senderName, content }),
+      body: JSON.stringify({ senderId, senderName, content, receiverId, channel }),
     });
   } catch (e) {
     console.error("[Atlas] Failed to save message:", e.message);
@@ -88,13 +88,52 @@ io.on("connection", (socket) => {
       senderId: id,
       senderName: name,
       text: data.text,
+      channel: data.channel || 'all',
+      receiverId: data.receiverId || null,
       timestamp: new Date().toISOString(),
     };
-    io.emit("receive_message", message);
 
-    // Persist to DB
-    await saveMessage(id, name, data.text);
-    console.log(`[Chat] ${name}: ${data.text}`);
+    if (data.channel === 'direct' && data.receiverId) {
+      // Direct message to a specific user
+      const targetSocketId = userSockets.get(data.receiverId);
+      if (targetSocketId) {
+        io.to(targetSocketId).emit("receive_message", message);
+      }
+      // Send it back to the sender
+      socket.emit("receive_message", message);
+      await saveMessage(id, name, data.text, data.receiverId, "direct");
+      console.log(`[Chat] DM ${name} -> ${data.receiverId}: ${data.text}`);
+    } else {
+      // Broadcast to channel (e.g. 'all' or 'admin')
+      io.emit("receive_message", message);
+      await saveMessage(id, name, data.text, null, message.channel);
+      console.log(`[Chat] ${name} [${message.channel}]: ${data.text}`);
+    }
+  });
+
+  // Admin broadcast route
+  socket.on("admin_broadcast", async (data) => {
+    const message = {
+      id: Date.now().toString(),
+      senderId: 'admin',
+      senderName: 'System Admin',
+      text: data.text,
+      channel: data.channel || 'admin',
+      receiverId: data.receiverId || null,
+      timestamp: new Date().toISOString(),
+    };
+
+    if (data.channel === 'direct' && data.receiverId) {
+      const targetSocketId = userSockets.get(data.receiverId);
+      if (targetSocketId) {
+        io.to(targetSocketId).emit("receive_message", message);
+      }
+      await saveMessage('admin', 'System Admin', data.text, data.receiverId, "direct");
+    } else {
+      io.emit("receive_message", message);
+      await saveMessage('admin', 'System Admin', data.text, null, message.channel);
+    }
+    console.log(`[Chat] Admin -> ${data.receiverId || message.channel}: ${data.text}`);
   });
 
   socket.on("typing", () => socket.broadcast.emit("developer_typing", { id, name }));

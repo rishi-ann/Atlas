@@ -21,28 +21,28 @@ model TestMessage {
 }
 
 model Project {
-  id              String   @id @default(cuid())
-  name            String
-  projectRef      String   @unique
-  projectUrl      String
-  serviceRoleKey  String
-  databaseUrl     String
-  environment     String   @default("production")
-  createdAt       DateTime @default(now())
+  id             String   @id @default(cuid())
+  name           String
+  projectRef     String   @unique
+  projectUrl     String
+  serviceRoleKey String
+  databaseUrl    String
+  environment    String   @default("production")
+  createdAt      DateTime @default(now())
 }
 
 model Developer {
-  id          String    @id @default(cuid())
-  name        String
-  email       String    @unique
-  reason      String
-  status      String    @default("pending")
-  lastSeenAt  DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  tasks       Task[]
-  clients     Client[]
-  logs        AuditLog[]
+  id         String     @id @default(cuid())
+  name       String
+  email      String     @unique
+  reason     String
+  status     String     @default("pending")
+  lastSeenAt DateTime?
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  tasks      Task[]
+  clients    Client[]
+  logs       AuditLog[]
 }
 
 model Task {
@@ -57,47 +57,49 @@ model Task {
 }
 
 model Client {
-  id              String     @id @default(cuid())
-  clientRef       String     @unique
-  name            String
-  email           String
-  company         String?
-  companyType     String?
-  authorizedName  String?
-  phone           String?
-  address         String?
-  developerId     String?
-  developer       Developer? @relation(fields: [developerId], references: [id], onDelete: SetNull)
-  createdAt       DateTime   @default(now())
-  updatedAt       DateTime   @default(now()) @updatedAt
+  id             String     @id @default(cuid())
+  clientRef      String     @unique
+  name           String
+  email          String
+  company        String?
+  companyType    String?
+  authorizedName String?
+  phone          String?
+  address        String?
+  developerId    String?
+  developer      Developer? @relation(fields: [developerId], references: [id], onDelete: SetNull)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @default(now()) @updatedAt
 }
 
 model AuditLog {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   action      String
   details     String?
   developerId String
   developer   Developer @relation(fields: [developerId], references: [id], onDelete: Cascade)
-  createdAt   DateTime @default(now())
+  createdAt   DateTime  @default(now())
 }
 
 model ChatMessage {
-  id          String   @id @default(cuid())
-  content     String
-  senderId    String
-  senderName  String
-  createdAt   DateTime @default(now())
+  id         String   @id @default(cuid())
+  content    String
+  senderId   String
+  senderName String
+  receiverId String?
+  channel    String   @default("all")
+  createdAt  DateTime @default(now())
 }
 
 model CallLog {
-  id           String   @id @default(cuid())
+  id           String    @id @default(cuid())
   roomId       String
   callerId     String
   callerName   String
   receiverId   String?
   receiverName String?
-  status       String   @default("initiated") // initiated | accepted | rejected | missed | ended
-  startedAt    DateTime @default(now())
+  status       String    @default("initiated") // initiated | accepted | rejected | missed | ended
+  startedAt    DateTime  @default(now())
   endedAt      DateTime?
   durationSecs Int?
 }
