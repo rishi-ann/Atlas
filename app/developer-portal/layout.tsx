@@ -7,7 +7,7 @@ import {
   Kanban, 
   Code2, 
   Users2, 
-  Quote, 
+  Files, 
   Settings2, 
   MessageCircle, 
   PhoneCall, 
@@ -89,9 +89,9 @@ export default async function DeveloperLayout({
             <Users2 className="w-4 h-4 text-zinc-500 group-hover:text-emerald-500 transition-colors" />
             Clients
           </Link>
-          <Link href="/developer-portal/quotes" className="group flex items-center gap-3 px-3 py-2.5 rounded-xl text-zinc-400 hover:text-white hover:bg-white/5 transition-all text-sm font-medium">
-            <Quote className="w-4 h-4 text-zinc-500 group-hover:text-amber-500 transition-colors" />
-            Quotes
+          <Link href="/developer-portal/deliverables" className="group flex items-center gap-3 px-3 py-2.5 rounded-xl text-zinc-400 hover:text-white hover:bg-white/5 transition-all text-sm font-medium">
+            <Files className="w-4 h-4 text-zinc-500 group-hover:text-amber-500 transition-colors" />
+            Deliverables
           </Link>
           <Link href="/developer-portal/settings" className="group flex items-center gap-3 px-3 py-2.5 rounded-xl text-zinc-400 hover:text-white hover:bg-white/5 transition-all text-sm font-medium">
             <Settings2 className="w-4 h-4 text-zinc-500 group-hover:text-zinc-300 transition-colors" />

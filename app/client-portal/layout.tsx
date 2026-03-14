@@ -7,7 +7,8 @@ import {
   MessageSquare, 
   Files, 
   LogOut,
-  Building2
+  Building2,
+  ChevronRight
 } from 'lucide-react';
 
 export default async function ClientPortalLayout({
