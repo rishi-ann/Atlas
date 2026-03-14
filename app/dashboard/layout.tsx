@@ -32,6 +32,10 @@ export default async function DashboardLayout({
             <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></span>
             Project Analytics
           </Link>
+          <Link href="/dashboard/active-developers" className="px-3 py-2.5 rounded-lg text-zinc-400 text-sm font-medium hover:bg-white/5 hover:text-white transition-colors flex items-center gap-3">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.4)]"></span>
+            Active Sessions
+          </Link>
           <Link href="/dashboard/developers" className="px-3 py-2.5 rounded-lg text-zinc-400 text-sm font-medium hover:bg-white/5 hover:text-white transition-colors flex items-center gap-3">
             <span className="w-2 h-2 rounded-full border border-zinc-600"></span>
             Developer Requests

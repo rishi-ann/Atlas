@@ -32,16 +32,17 @@ model Project {
 }
 
 model Developer {
-  id        String   @id @default(cuid())
-  name      String
-  email     String   @unique
-  reason    String
-  status    String   @default("pending")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  tasks     Task[]
-  clients   Client[]
-  logs      AuditLog[]
+  id          String    @id @default(cuid())
+  name        String
+  email       String    @unique
+  reason      String
+  status      String    @default("pending")
+  lastSeenAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  tasks       Task[]
+  clients     Client[]
+  logs        AuditLog[]
 }
 
 model Task {
@@ -80,3 +81,23 @@ model AuditLog {
   createdAt   DateTime @default(now())
 }
 
+model ChatMessage {
+  id          String   @id @default(cuid())
+  content     String
+  senderId    String
+  senderName  String
+  createdAt   DateTime @default(now())
+}
+
+model CallLog {
+  id           String   @id @default(cuid())
+  roomId       String
+  callerId     String
+  callerName   String
+  receiverId   String?
+  receiverName String?
+  status       String   @default("initiated") // initiated | accepted | rejected | missed | ended
+  startedAt    DateTime @default(now())
+  endedAt      DateTime?
+  durationSecs Int?
+}
