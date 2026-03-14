@@ -2,7 +2,7 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { prisma } from '../../lib/prisma';
 import jwt from 'jsonwebtoken';
-import AdminChatClient from './AdminChatClient';
+import AdminChatWrapper from './AdminChatWrapper';
 
 const JWT_SECRET = process.env.CHAT_JWT_SECRET || 'atlas-dev-chat-secret-2025';
 
@@ -44,7 +44,7 @@ export default async function AdminChatPage() {
         </p>
       </div>
       <div className="flex-1 overflow-hidden pb-8 px-8">
-        <AdminChatClient token={token} allDevelopers={devs} />
+        <AdminChatWrapper token={token} allDevelopers={devs} />
       </div>
     </div>
   );

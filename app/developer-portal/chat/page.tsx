@@ -2,7 +2,7 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { prisma } from '../../lib/prisma';
 import jwt from 'jsonwebtoken';
-import DevChatClient from './DevChatClient';
+import DevChatWrapper from './DevChatWrapper';
 
 const JWT_SECRET = process.env.CHAT_JWT_SECRET || 'atlas-dev-chat-secret-2025';
 
@@ -54,7 +54,7 @@ export default async function DevChatPage() {
   );
 
   return (
-    <DevChatClient
+    <DevChatWrapper
       token={token}
       developer={developer}
       allDevelopers={portalActiveDevelopers}

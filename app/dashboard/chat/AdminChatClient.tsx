@@ -36,12 +36,19 @@ export default function AdminChatClient({
   const [lastMessages, setLastMessages] = useState<Record<string, { text: string; timestamp: string }>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const [mounted, setMounted] = useState(false);
+
   const socketRef = useRef<Socket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   // Load chat history from DB on mount
   useEffect(() => {
+    if (!mounted) return;
     fetch(`/api/chat/messages?limit=200`) // Admin fetches all messages (or recent 200)
       .then(r => r.json())
       .then((data: any[]) => {
@@ -235,10 +242,12 @@ export default function AdminChatClient({
   });
 
   const getChannelName = () => {
-    if (activeChannel === 'all') return '#atlas-dev-lounge';
-    if (activeChannel === 'admin') return '#admin-announcements';
-    return `#dm-${allDevelopers.find(d => d.id === activeChannel)?.name || 'Unknown'}`;
+    if (activeChannel === 'all') return 'Lounge';
+    if (activeChannel === 'admin') return 'Admin Announcements';
+    return allDevelopers.find(d => d.id === activeChannel)?.name || 'Unknown';
   };
+
+  if (!mounted) return null;
 
   return (
     <div className="flex h-full w-full gap-4">

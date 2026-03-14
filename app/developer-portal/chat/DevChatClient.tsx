@@ -47,13 +47,20 @@ export default function DevChatClient({
   const [incomingCall, setIncomingCall] = useState<IncomingCall | null>(null);
   const [callToast, setCallToast] = useState<string | null>(null);
 
+  const [mounted, setMounted] = useState(false);
+
   const socketRef = useRef<Socket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [historyLoaded, setHistoryLoaded] = useState(false);
 
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   // Load chat history from DB on mount
   useEffect(() => {
+    if (!mounted) return;
     fetch(`/api/chat/messages?limit=100&userId=${developer.id}`)
       .then(r => r.json())
       .then((data: any[]) => {
@@ -281,7 +288,10 @@ export default function DevChatClient({
     for (const c of name) hash = c.charCodeAt(0) + ((hash << 5) - hash);
     return colors[Math.abs(hash) % colors.length];
   };
-  const getInitials = (name: string) => name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  const getInitials = (name: string) => {
+    if (!name) return '?';
+    return name.split(' ').filter(Boolean).map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  };
 
   const sortedDevs = [...allDevelopers].sort((a, b) => {
     if (a.id === developer.id) return -1;
@@ -303,6 +313,8 @@ export default function DevChatClient({
     if (activeChannel === 'admin') return '#admin-announcements';
     return `#dm-${allDevelopers.find(d => d.id === activeChannel)?.name || 'Unknown'}`;
   };
+
+  if (!mounted) return null;
 
   return (
     <>
