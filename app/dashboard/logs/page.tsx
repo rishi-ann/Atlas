@@ -51,7 +51,7 @@ export default async function AuditLogPage() {
              <p className="text-zinc-600 font-medium tracking-tight">Immutable registry is currently empty.</p>
           </div>
         ) : (
-          logs.map(log => {
+          logs.map((log: any) => {
             const styles = getActionStyles(log.action);
             return (
               <div 

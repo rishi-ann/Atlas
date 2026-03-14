@@ -10,14 +10,14 @@ export async function createClient(formData: FormData) {
 
   if (!superToken || superToken.value !== 'true') return { error: 'Not authenticated' };
 
-  const name = formData.get('name') as string;
-  const email = formData.get('email') as string;
-  const company = formData.get('company') as string;
-  const companyType = formData.get('companyType') as string;
-  const authorizedName = formData.get('authorizedName') as string;
-  const phone = formData.get('phone') as string;
-  const address = formData.get('address') as string;
-  const developerId = formData.get('developerId') as string;
+  const name = formData.get('name')?.toString();
+  const email = formData.get('email')?.toString();
+  const company = formData.get('company')?.toString() || null;
+  const companyType = formData.get('companyType')?.toString() || null;
+  const authorizedName = formData.get('authorizedName')?.toString() || null;
+  const phone = formData.get('phone')?.toString() || null;
+  const address = formData.get('address')?.toString() || null;
+  const developerId = formData.get('developerId')?.toString() || null;
 
   if (!name || !email) return { error: 'Name and email are required' };
 
@@ -42,6 +42,7 @@ export async function createClient(formData: FormData) {
     revalidatePath('/super-admin/clients');
     return { success: true };
   } catch (err: any) {
+    console.error('Failed to provision client:', err);
     return { error: 'Failed to create client.' };
   }
 }
