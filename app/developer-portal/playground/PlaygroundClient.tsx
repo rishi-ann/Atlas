@@ -55,48 +55,57 @@ export default function PlaygroundClient({
   // Initialize Socket
   useEffect(() => {
     const CHAT_URL = process.env.NEXT_PUBLIC_CHAT_SERVER_URL || 'http://localhost:4001';
-    const socket = io(CHAT_URL, { auth: { token }, transports: ['websocket', 'polling'] });
-    socketRef.current = socket;
+    let socket: Socket;
 
-    socket.on('connect', () => {
-      setConnected(true);
-      socket.emit('playground_get_tree');
-      socket.emit('terminal_init');
-    });
+    try {
+      socket = io(CHAT_URL, { auth: { token }, transports: ['websocket', 'polling'], reconnectionAttempts: 5, timeout: 5000 });
+      socketRef.current = socket;
 
-    socket.on('disconnect', () => setConnected(false));
+      socket.on('connect', () => {
+        setConnected(true);
+        socket.emit('playground_get_tree');
+        socket.emit('terminal_init');
+      });
 
-    socket.on('playground_tree', (newTree: FileNode[]) => {
-      setTree(newTree);
-    });
+      socket.on('disconnect', () => setConnected(false));
+      socket.on('connect_error', () => setConnected(false));
 
-    socket.on('playground_file_content', ({ path, content }: { path: string, content: string }) => {
-      if (path === activeFile) {
-        setCode(content);
-      }
-    });
+      socket.on('playground_tree', (newTree: FileNode[]) => {
+        setTree(newTree);
+      });
 
-    socket.on('playground_code_update', ({ path, content }: { path: string, content: string }) => {
-      if (path === activeFile) {
-        setCode(content);
-      }
-    });
+      socket.on('playground_file_content', ({ path, content }: { path: string, content: string }) => {
+        if (path === activeFile) {
+          setCode(content);
+        }
+      });
 
-    socket.on('playground_file_saved', ({ path }: { path: string }) => {
-      // Potentially show a toast
-    });
+      socket.on('playground_code_update', ({ path, content }: { path: string, content: string }) => {
+        if (path === activeFile) {
+          setCode(content);
+        }
+      });
 
-    socket.on('terminal_output', (data: string) => {
-      xtermRef.current?.write(data);
-    });
+      socket.on('playground_file_saved', ({ path }: { path: string }) => {
+        // Potentially show a toast
+      });
 
-    socket.on('playground_error', (msg: string) => {
-      console.error('Playground Error:', msg);
-    });
+      socket.on('terminal_output', (data: string) => {
+        xtermRef.current?.write(data);
+      });
 
-    return () => {
-      socket.disconnect();
-    };
+      socket.on('playground_error', (msg: string) => {
+        console.error('Playground Error:', msg);
+      });
+
+      return () => {
+        socket.disconnect();
+      };
+    } catch (err) {
+      console.error('Playground connection error:', err);
+      setConnected(false);
+      return () => {};
+    }
   }, [token, activeFile]);
 
   // Initialize Terminal

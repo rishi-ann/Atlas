@@ -62,6 +62,10 @@ export default async function DashboardLayout({
             <ShieldCheck className="w-4 h-4 text-zinc-500 group-hover:text-emerald-400 transition-colors" />
             Audit Logs
           </Link>
+          <Link href="/dashboard/chat" className="group flex items-center gap-3 px-3 py-2.5 rounded-xl text-zinc-400 hover:text-white hover:bg-white/5 transition-all text-sm font-medium">
+            <MessageSquare className="w-4 h-4 text-zinc-500 group-hover:text-rose-500 transition-colors" />
+            Internal Messaging
+          </Link>
         </nav>
         
         <div className="p-4 mt-auto border-t border-white/5">

@@ -95,83 +95,84 @@ export default function DevChatClient({
 
   useEffect(() => {
     const CHAT_URL = process.env.NEXT_PUBLIC_CHAT_SERVER_URL || 'http://localhost:4001';
-    const socket = io(CHAT_URL, { auth: { token }, transports: ['websocket', 'polling'] });
-    socketRef.current = socket;
+    let socket: Socket;
+    try {
+      socket = io(CHAT_URL, { auth: { token }, transports: ['websocket', 'polling'], reconnectionAttempts: 5, timeout: 5000 });
+      socketRef.current = socket;
 
-    socket.on('connect', () => setConnected(true));
-    socket.on('disconnect', () => { setConnected(false); setChatOnlineIds(new Set()); });
-    socket.on('receive_message', (msg: Message) => {
-      setMessages(prev => [...prev, msg]);
-      
-      const channelKey = msg.channel === 'direct' 
-        ? (msg.senderId === developer.id ? msg.receiverId! : msg.senderId)
-        : msg.channel || 'all';
+      socket.on('connect', () => setConnected(true));
+      socket.on('disconnect', () => { setConnected(false); setChatOnlineIds(new Set()); });
+      socket.on('connect_error', () => { setConnected(false); });
+      socket.on('receive_message', (msg: Message) => {
+        setMessages(prev => [...prev, msg]);
+        
+        const channelKey = msg.channel === 'direct' 
+          ? (msg.senderId === developer.id ? msg.receiverId! : msg.senderId)
+          : msg.channel || 'all';
 
-      // Update last message
-      setLastMessages(prev => ({
-        ...prev,
-        [channelKey]: { 
-          text: msg.text || (msg.fileUrl ? (msg.fileType === 'image' ? '📷 Image' : msg.fileType === 'video' ? '🎥 Video' : '📄 File') : ''), 
-          timestamp: msg.timestamp 
+        setLastMessages(prev => ({
+          ...prev,
+          [channelKey]: { 
+            text: msg.text || (msg.fileUrl ? (msg.fileType === 'image' ? '📷 Image' : msg.fileType === 'video' ? '🎥 Video' : '📄 File') : ''), 
+            timestamp: msg.timestamp 
+          }
+        }));
+
+        if (msg.senderId !== developer.id) {
+          if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+            new Notification(msg.senderName, {
+              body: msg.text || 'Sent an attachment',
+              icon: 'https://ik.imagekit.io/dypkhqxip/logo_atlas.png'
+            });
+          }
+          
+          if ((msg.channel === 'direct' && channelKey !== activeChannel) || (msg.channel !== 'direct' && msg.channel !== activeChannel)) {
+            setUnreadCounts(prev => ({
+              ...prev,
+              [channelKey]: (prev[channelKey] || 0) + 1
+            }));
+          }
         }
-      }));
+      });
+      socket.on('online_users', (users: SocketUser[]) => setChatOnlineIds(new Set(users.map(u => u.id))));
+      socket.on('developer_typing', (user: SocketUser) => setTypingUsers(prev => prev.find(u => u.id === user.id) ? prev : [...prev, user]));
+      socket.on('developer_stop_typing', (user: { id: string }) => setTypingUsers(prev => prev.filter(u => u.id !== user.id)));
 
-      // Notifications
-      if (msg.senderId !== developer.id) {
-        // Browser notification
-        if (Notification.permission === 'granted') {
-          new Notification(msg.senderName, {
-            body: msg.text || 'Sent an attachment',
+      socket.on('incoming_call', (data: IncomingCall) => { 
+        setIncomingCall(data);
+        if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+          new Notification('Incoming Video Call', { body: `${data.callerName} is calling you.` });
+        }
+      });
+      socket.on('call_accepted_ack', ({ roomId }: any) => { setActiveRoomId(roomId); setInCall(true); });
+      socket.on('call_rejected_ack', ({ rejectorName }: any) => {
+        setCallToast(`${rejectorName} declined the call.`);
+        setTimeout(() => setCallToast(null), 3500);
+      });
+      socket.on('call_failed', ({ reason }: any) => {
+        setCallToast(reason);
+        setTimeout(() => setCallToast(null), 3500);
+      });
+
+      socket.on('task_notification', (data: any) => {
+        if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+          new Notification('Task Update', { 
+            body: `${data.senderName} updated task: ${data.title}`,
             icon: 'https://ik.imagekit.io/dypkhqxip/logo_atlas.png'
           });
         }
-        
-        // Update unread count if not in active channel
-        if ((msg.channel === 'direct' && channelKey !== activeChannel) || (msg.channel !== 'direct' && msg.channel !== activeChannel)) {
-          setUnreadCounts(prev => ({
-            ...prev,
-            [channelKey]: (prev[channelKey] || 0) + 1
-          }));
-        }
-      }
-    });
-    socket.on('online_users', (users: SocketUser[]) => setChatOnlineIds(new Set(users.map(u => u.id))));
-    socket.on('developer_typing', (user: SocketUser) => setTypingUsers(prev => prev.find(u => u.id === user.id) ? prev : [...prev, user]));
-    socket.on('developer_stop_typing', (user: { id: string }) => setTypingUsers(prev => prev.filter(u => u.id !== user.id)));
+      });
 
-    // Call events
-    socket.on('incoming_call', (data: IncomingCall) => { 
-      setIncomingCall(data);
-      // Play system sound if possible or show alert
-      if (Notification.permission === 'granted') {
-        new Notification('Incoming Video Call', { body: `${data.callerName} is calling you.` });
+      if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+        Notification.requestPermission();
       }
-    });
-    socket.on('call_accepted_ack', ({ roomId }: any) => { setActiveRoomId(roomId); setInCall(true); });
-    socket.on('call_rejected_ack', ({ rejectorName }: any) => {
-      setCallToast(`${rejectorName} declined the call.`);
-      setTimeout(() => setCallToast(null), 3500);
-    });
-    socket.on('call_failed', ({ reason }: any) => {
-      setCallToast(reason);
-      setTimeout(() => setCallToast(null), 3500);
-    });
 
-    socket.on('task_notification', (data: any) => {
-      if (Notification.permission === 'granted') {
-        new Notification('Task Update', { 
-          body: `${data.senderName} updated task: ${data.title}`,
-          icon: 'https://ik.imagekit.io/dypkhqxip/logo_atlas.png'
-        });
-      }
-    });
-
-    // Request notification permission
-    if (Notification.permission === 'default') {
-      Notification.requestPermission();
+      return () => { socket.disconnect(); };
+    } catch (err) {
+      console.error('Chat connection error:', err);
+      setConnected(false);
+      return () => {};
     }
-
-    return () => { socket.disconnect(); };
   }, [token, activeChannel, developer.id]);
 
   useEffect(() => {

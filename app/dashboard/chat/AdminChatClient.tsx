@@ -82,42 +82,63 @@ export default function AdminChatClient({
 
   useEffect(() => {
     const CHAT_URL = process.env.NEXT_PUBLIC_CHAT_SERVER_URL || 'http://localhost:4001';
-    const socket = io(CHAT_URL, { auth: { token }, transports: ['websocket', 'polling'] });
-    socketRef.current = socket;
+    let socket: Socket;
+    
+    try {
+      socket = io(CHAT_URL, { auth: { token }, transports: ['websocket', 'polling'], reconnectionAttempts: 5, timeout: 5000 });
+      socketRef.current = socket;
 
-    socket.on('connect', () => setConnected(true));
-    socket.on('disconnect', () => { setConnected(false); setChatOnlineIds(new Set()); });
-    socket.on('receive_message', (msg: Message) => {
-      setMessages(prev => [...prev, msg]);
+      socket.on('connect', () => {
+        setConnected(true);
+      });
+      
+      socket.on('disconnect', () => { 
+        setConnected(false); 
+        setChatOnlineIds(new Set()); 
+      });
+      
+      socket.on('connect_error', () => {
+        setConnected(false);
+      });
 
-      const channelKey = msg.channel === 'direct' 
-        ? (msg.senderId === 'admin' ? msg.receiverId! : msg.senderId)
-        : msg.channel || 'all';
+      socket.on('receive_message', (msg: Message) => {
+        setMessages(prev => [...prev, msg]);
 
-      // Update last message
-      setLastMessages(prev => ({
-        ...prev,
-        [channelKey]: { 
-          text: msg.text || (msg.fileUrl ? (msg.fileType === 'image' ? '📷 Image' : msg.fileType === 'video' ? '🎥 Video' : '📄 File') : ''), 
-          timestamp: msg.timestamp 
+        const channelKey = msg.channel === 'direct' 
+          ? (msg.senderId === 'admin' ? msg.receiverId! : msg.senderId)
+          : msg.channel || 'all';
+
+        // Update last message
+        setLastMessages(prev => ({
+          ...prev,
+          [channelKey]: { 
+            text: msg.text || (msg.fileUrl ? (msg.fileType === 'image' ? '📷 Image' : msg.fileType === 'video' ? '🎥 Video' : '📄 File') : ''), 
+            timestamp: msg.timestamp 
+          }
+        }));
+
+        // Update unread count
+        if ((msg.channel === 'direct' && channelKey !== activeChannel) || (msg.channel !== 'direct' && msg.channel !== activeChannel)) {
+          if (msg.senderId !== 'admin') {
+            setUnreadCounts(prev => ({
+              ...prev,
+              [channelKey]: (prev[channelKey] || 0) + 1
+            }));
+          }
         }
-      }));
+      });
+      socket.on('online_users', (users: SocketUser[]) => setChatOnlineIds(new Set(users.map(u => u.id))));
+      socket.on('developer_typing', (user: SocketUser) => setTypingUsers(prev => prev.find(u => u.id === user.id) ? prev : [...prev, user]));
+      socket.on('developer_stop_typing', (user: { id: string }) => setTypingUsers(prev => prev.filter(u => u.id !== user.id)));
 
-      // Update unread count
-      if ((msg.channel === 'direct' && channelKey !== activeChannel) || (msg.channel !== 'direct' && msg.channel !== activeChannel)) {
-        if (msg.senderId !== 'admin') {
-          setUnreadCounts(prev => ({
-            ...prev,
-            [channelKey]: (prev[channelKey] || 0) + 1
-          }));
-        }
-      }
-    });
-    socket.on('online_users', (users: SocketUser[]) => setChatOnlineIds(new Set(users.map(u => u.id))));
-    socket.on('developer_typing', (user: SocketUser) => setTypingUsers(prev => prev.find(u => u.id === user.id) ? prev : [...prev, user]));
-    socket.on('developer_stop_typing', (user: { id: string }) => setTypingUsers(prev => prev.filter(u => u.id !== user.id)));
-
-    return () => { socket.disconnect(); };
+      return () => { 
+        socket.disconnect(); 
+      };
+    } catch (err) {
+      console.error('Admin chat connection error:', err);
+      setConnected(false);
+      return () => {};
+    }
   }, [token, activeChannel]);
 
   useEffect(() => {

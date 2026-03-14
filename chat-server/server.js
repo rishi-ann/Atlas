@@ -2,7 +2,8 @@ const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
 const jwt = require("jsonwebtoken");
-const pty = require("node-pty");
+let pty = null;
+try { pty = require("node-pty"); } catch (e) { console.warn("[Atlas] node-pty not available — terminal features disabled"); }
 const fs = require("fs");
 const path = require("path");
 const os = require("os");
@@ -388,6 +389,10 @@ io.on("connection", (socket) => {
   // ── Terminal ──────────────────────────────────────────────────────────────
 
   socket.on("terminal_init", () => {
+    if (!pty) {
+      socket.emit("terminal_output", "\r\n[Atlas] Terminal not available in this environment.\r\n");
+      return;
+    }
     const shell = os.platform() === 'win32' ? 'powershell.exe' : 'bash';
     const ptyProcess = pty.spawn(shell, [], {
       name: 'xterm-color',

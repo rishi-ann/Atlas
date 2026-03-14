@@ -98,6 +98,16 @@ export default async function DeveloperLayout({
             Settings
           </Link>
           
+          <div className="text-[11px] font-bold text-zinc-600 px-3 mt-4 mb-2 tracking-wide uppercase">Communication</div>
+          <Link href="/developer-portal/chat" className="group flex items-center gap-3 px-3 py-2.5 rounded-xl text-zinc-400 hover:text-white hover:bg-white/5 transition-all text-sm font-medium">
+            <MessageCircle className="w-4 h-4 text-zinc-500 group-hover:text-rose-500 transition-colors" />
+            Dev Chat
+          </Link>
+          <Link href="/developer-portal/calls" className="group flex items-center gap-3 px-3 py-2.5 rounded-xl text-zinc-400 hover:text-white hover:bg-white/5 transition-all text-sm font-medium opacity-50 cursor-not-allowed">
+            <PhoneCall className="w-4 h-4 text-zinc-500" />
+            Call History
+          </Link>
+          
         </nav>
         
         <div className="p-4 mt-auto border-t border-white/5">
