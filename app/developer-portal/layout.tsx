@@ -62,6 +62,10 @@ export default async function DeveloperLayout({
             <span className="w-2 h-2 rounded-full border border-zinc-600"></span>
             Task Kanban
           </Link>
+          <Link href="/developer-portal/playground" className="px-3 py-2.5 rounded-lg text-zinc-400 text-sm font-medium hover:bg-white/5 hover:text-white transition-colors flex items-center gap-3">
+            <span className="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]"></span>
+            Coding Playground
+          </Link>
           <Link href="/developer-portal/clients" className="px-3 py-2.5 rounded-lg text-zinc-400 text-sm font-medium hover:bg-white/5 hover:text-white transition-colors flex items-center gap-3">
             <span className="w-2 h-2 rounded-full border border-zinc-600"></span>
             Clients

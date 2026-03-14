@@ -2,6 +2,10 @@ const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
 const jwt = require("jsonwebtoken");
+const pty = require("node-pty");
+const fs = require("fs");
+const path = require("path");
+const os = require("os");
 
 const app = express();
 const server = http.createServer(app);
@@ -27,6 +31,15 @@ const onlineUsers = new Map(); // socketId -> { id, name }
 const userSockets = new Map(); // userId -> socketId
 const videoRooms = new Map();  // roomId -> [{ id, name, socketId }]
 const callTimers = new Map();  // roomId -> startTime
+
+// Playground tracking
+const activeFiles = new Map(); // path -> content (for collaborative editing)
+const shells = new Map();      // socketId -> pty process
+const WORKSPACE_ROOT = path.resolve(__dirname, '..', 'workspace');
+
+if (!fs.existsSync(WORKSPACE_ROOT)) {
+  fs.mkdirSync(WORKSPACE_ROOT, { recursive: true });
+}
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -233,8 +246,132 @@ io.on("connection", (socket) => {
     const durationSecs = start ? Math.floor((Date.now() - start) / 1000) : null;
     if (durationSecs !== null && room && room.length <= 1) callTimers.delete(roomId);
 
-    await logCall("end", { roomId, status: "ended", durationSecs });
     console.log(`[Call] Room ${roomId} ended by ${name} | ${durationSecs}s`);
+  });
+
+  // ── Playground (Coding) ──────────────────────────────────────────────────
+
+  socket.on("playground_get_tree", () => {
+    function getTree(dir) {
+      const items = fs.readdirSync(dir, { withFileTypes: true });
+      return items.map(item => {
+        const fullPath = path.join(dir, item.name);
+        const relativePath = path.relative(WORKSPACE_ROOT, fullPath);
+        if (item.isDirectory()) {
+          // Skip node_modules
+          if (item.name === 'node_modules') return null;
+          return { name: item.name, type: 'directory', path: relativePath, children: getTree(fullPath) };
+        }
+        return { name: item.name, type: 'file', path: relativePath };
+      }).filter(Boolean);
+    }
+    try {
+      const tree = getTree(WORKSPACE_ROOT);
+      socket.emit("playground_tree", tree);
+    } catch (err) {
+      socket.emit("playground_error", "Failed to read workspace tree");
+    }
+  });
+
+  socket.on("playground_read_file", (filePath) => {
+    try {
+      const fullPath = path.join(WORKSPACE_ROOT, filePath);
+      if (!fullPath.startsWith(WORKSPACE_ROOT)) throw new Error("Access denied");
+      const content = fs.readFileSync(fullPath, 'utf8');
+      socket.emit("playground_file_content", { path: filePath, content });
+    } catch (err) {
+      socket.emit("playground_error", "Failed to read file");
+    }
+  });
+
+  socket.on("playground_save_file", ({ path: filePath, content }) => {
+    try {
+      const fullPath = path.join(WORKSPACE_ROOT, filePath);
+      if (!fullPath.startsWith(WORKSPACE_ROOT)) throw new Error("Access denied");
+      fs.writeFileSync(fullPath, content);
+      socket.broadcast.emit("playground_file_saved", { path: filePath, content });
+      console.log(`[Playground] File saved: ${filePath} by ${name}`);
+    } catch (err) {
+      socket.emit("playground_error", "Failed to save file");
+    }
+  });
+
+  socket.on("playground_create_item", ({ path: itemPath, type }) => {
+    try {
+      const fullPath = path.join(WORKSPACE_ROOT, itemPath);
+      if (!fullPath.startsWith(WORKSPACE_ROOT)) throw new Error("Access denied");
+      
+      if (type === 'directory') {
+        fs.mkdirSync(fullPath, { recursive: true });
+      } else {
+        const dir = path.dirname(fullPath);
+        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+        fs.writeFileSync(fullPath, '');
+      }
+      
+      const tree = getTree(WORKSPACE_ROOT);
+      io.emit("playground_tree", tree); // Broadcast to all
+      console.log(`[Playground] ${type} created: ${itemPath} by ${name}`);
+    } catch (err) {
+      socket.emit("playground_error", "Failed to create item");
+    }
+  });
+
+  socket.on("playground_delete_item", (itemPath) => {
+    try {
+      const fullPath = path.join(WORKSPACE_ROOT, itemPath);
+      if (!fullPath.startsWith(WORKSPACE_ROOT)) throw new Error("Access denied");
+      
+      if (fs.lstatSync(fullPath).isDirectory()) {
+        fs.rmSync(fullPath, { recursive: true, force: true });
+      } else {
+        fs.unlinkSync(fullPath);
+      }
+      
+      const tree = getTree(WORKSPACE_ROOT);
+      io.emit("playground_tree", tree);
+      console.log(`[Playground] Item deleted: ${itemPath} by ${name}`);
+    } catch (err) {
+      socket.emit("playground_error", "Failed to delete item");
+    }
+  });
+
+  socket.on("playground_code_change", ({ path: filePath, content }) => {
+    socket.broadcast.emit("playground_code_update", { path: filePath, content });
+  });
+
+  // ── Terminal ──────────────────────────────────────────────────────────────
+
+  socket.on("terminal_init", () => {
+    const shell = os.platform() === 'win32' ? 'powershell.exe' : 'bash';
+    const ptyProcess = pty.spawn(shell, [], {
+      name: 'xterm-color',
+      cols: 80,
+      rows: 24,
+      cwd: WORKSPACE_ROOT,
+      env: process.env
+    });
+
+    shells.set(socket.id, ptyProcess);
+
+    ptyProcess.on('data', (data) => {
+      socket.emit("terminal_output", data);
+    });
+
+    ptyProcess.on('exit', () => {
+      shells.delete(socket.id);
+      socket.emit("terminal_exit");
+    });
+  });
+
+  socket.on("terminal_input", (data) => {
+    const shell = shells.get(socket.id);
+    if (shell) shell.write(data);
+  });
+
+  socket.on("terminal_resize", ({ cols, rows }) => {
+    const shell = shells.get(socket.id);
+    if (shell) shell.resize(cols, rows);
   });
 
   // ── Disconnect ────────────────────────────────────────────────────────────
@@ -244,6 +381,13 @@ io.on("connection", (socket) => {
     userSockets.delete(id);
     io.emit("online_users", Array.from(onlineUsers.values()));
     socket.broadcast.emit("developer_left", { id, name });
+    
+    const shell = shells.get(socket.id);
+    if (shell) {
+      shell.kill();
+      shells.delete(socket.id);
+    }
+
     console.log(`[Atlas] Disconnected: ${name}`);
   });
 });
