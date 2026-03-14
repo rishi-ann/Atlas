@@ -107,7 +107,7 @@ model CallLog {
   durationSecs Int?
 }
 
-model SystemLog {
+model AtlasLog {
   id        String   @id @default(cuid())
   level     String   @default("info") // info | warn | error | success
   category  String   // git | server | user | dashboard

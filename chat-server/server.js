@@ -106,7 +106,7 @@ io.on("connection", (socket) => {
 
   io.emit("online_users", Array.from(onlineUsers.values()));
   socket.broadcast.emit("developer_joined", { id, name });
-  broadcastSystemLog("success", "user", `${name} joined the platform workspace`);
+  broadcastSystemLog("success", "user", `${name} joined the Atlas platform`);
 
   // ── Chat ─────────────────────────────────────────────────────────────────
 

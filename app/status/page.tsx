@@ -7,14 +7,20 @@ export const revalidate = 0;
 
 export default async function StatusPage() {
   // Fetch initial data
-  const logs = await prisma.systemLog.findMany({
-    orderBy: { createdAt: 'desc' },
-    take: 50,
-  });
+  // Using a separate try/catch to handle potential DB issues gracefully
+  let logs = [];
+  try {
+    logs = await prisma.atlasLog.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    });
+  } catch (err) {
+    console.error('Failed to fetch atlas logs:', err);
+  }
 
   const commits = await getGitCommits();
 
-  // Mock health for initial load (actual polling in client)
+  // Initial health status
   const initialHealth = {
     status: 'operational',
     uptime: process.uptime(),
