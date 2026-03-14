@@ -88,6 +88,9 @@ model ChatMessage {
   senderName String
   receiverId String?
   channel    String   @default("all")
+  fileUrl    String?
+  fileType   String?  // 'image', 'video', 'document'
+  fileName   String?
   createdAt  DateTime @default(now())
 }
 

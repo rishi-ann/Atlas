@@ -8,13 +8,22 @@ export async function POST(req: NextRequest) {
   const auth = req.headers.get('x-internal-secret');
   if (auth !== INTERNAL_SECRET) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { senderId, senderName, content, receiverId, channel } = await req.json();
-  if (!senderId || !senderName || !content) {
+  const { senderId, senderName, content, receiverId, channel, fileUrl, fileType, fileName } = await req.json();
+  if (!senderId || !senderName || ( !content && !fileUrl )) {
     return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
   }
 
   const msg = await prisma.chatMessage.create({
-    data: { senderId, senderName, content, receiverId, channel: channel || 'all' }
+    data: { 
+      senderId, 
+      senderName, 
+      content: content || '', 
+      receiverId, 
+      channel: channel || 'all',
+      fileUrl,
+      fileType,
+      fileName
+    }
   });
 
   return NextResponse.json({ id: msg.id });

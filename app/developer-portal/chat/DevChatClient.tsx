@@ -5,7 +5,18 @@ import { io, Socket } from 'socket.io-client';
 import VideoCallModal from './VideoCallModal';
 import IncomingCallPopup from './IncomingCallPopup';
 
-type Message = { id: string; senderId: string; senderName: string; text: string; timestamp: string; channel?: string; receiverId?: string | null; };
+type Message = { 
+  id: string; 
+  senderId: string; 
+  senderName: string; 
+  text: string; 
+  timestamp: string; 
+  channel?: string; 
+  receiverId?: string | null;
+  fileUrl?: string | null;
+  fileType?: string | null;
+  fileName?: string | null;
+};
 type PortalDev = { id: string; name: string; email: string; isPortalActive: boolean; };
 type SocketUser = { id: string; name: string; };
 type IncomingCall = { callerId: string; callerName: string; roomId: string; };
@@ -25,6 +36,8 @@ export default function DevChatClient({
   const [connected, setConnected] = useState(false);
   const [typingUsers, setTypingUsers] = useState<SocketUser[]>([]);
   const [activeChannel, setActiveChannel] = useState<string>('all');
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Call state
   const [inCall, setInCall] = useState(false);
@@ -50,6 +63,9 @@ export default function DevChatClient({
             text: m.content,
             channel: m.channel,
             receiverId: m.receiverId,
+            fileUrl: m.fileUrl,
+            fileType: m.fileType,
+            fileName: m.fileName,
             timestamp: m.createdAt,
           }));
           setMessages(historical);
@@ -99,11 +115,50 @@ export default function DevChatClient({
       text: input.trim(),
       channel: isDirect ? 'direct' : activeChannel,
       receiverId: isDirect ? activeChannel : null,
+      fileUrl: null,
+      fileType: null,
+      fileName: null,
     });
     
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     socketRef.current.emit('stop_typing');
     setInput('');
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !socketRef.current) return;
+
+    setUploading(true);
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json();
+
+      if (data.url) {
+        const isDirect = activeChannel !== 'all' && activeChannel !== 'admin';
+        socketRef.current.emit('send_message', {
+          text: '',
+          channel: isDirect ? 'direct' : activeChannel,
+          receiverId: isDirect ? activeChannel : null,
+          fileUrl: data.url,
+          fileType: data.fileType,
+          fileName: data.fileName,
+        });
+      }
+    } catch (err) {
+      console.error('Upload failed:', err);
+      setCallToast('File upload failed.');
+      setTimeout(() => setCallToast(null), 3000);
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -323,7 +378,23 @@ export default function DevChatClient({
                       </div>
                     )}
                     <div className={`px-3.5 py-2 rounded-2xl text-sm leading-relaxed ${isOwn ? 'bg-rose-500 text-white rounded-br-sm' : 'bg-zinc-900 border border-zinc-800/80 text-zinc-100 rounded-bl-sm'}`}>
-                      {msg.text}
+                      {msg.text && <div>{msg.text}</div>}
+                      {msg.fileUrl && (
+                        <div className={msg.text ? 'mt-3' : ''}>
+                          {msg.fileType === 'image' && (
+                            <img src={msg.fileUrl} alt={msg.fileName || 'Attachment'} className="max-w-full rounded-lg border border-black/20" />
+                          )}
+                          {msg.fileType === 'video' && (
+                            <video src={msg.fileUrl} controls className="max-w-full rounded-lg border border-black/20" />
+                          )}
+                          {msg.fileType === 'document' && (
+                            <a href={msg.fileUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 p-2 rounded-lg bg-black/20 hover:bg-black/30 transition-colors">
+                              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                              <span className="text-xs font-medium truncate max-w-[150px]">{msg.fileName || 'Document'}</span>
+                            </a>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -344,6 +415,18 @@ export default function DevChatClient({
 
           <div className="px-6 pb-5 pt-3">
             <div className="flex items-center gap-3 bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 focus-within:border-zinc-700 transition-colors">
+              <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" />
+              <button 
+                onClick={() => fileInputRef.current?.click()}
+                disabled={!connected || uploading || activeChannel === 'admin'}
+                className="text-zinc-500 hover:text-white transition-colors disabled:opacity-30"
+              >
+                {uploading ? (
+                  <div className="w-4 h-4 border-2 border-zinc-500 border-t-white rounded-full animate-spin"></div>
+                ) : (
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
+                )}
+              </button>
               <input
                 type="text"
                 value={input}
