@@ -2,7 +2,7 @@
 
 <img src="https://ik.imagekit.io/dypkhqxip/logo_atlas.png" alt="Atlas Logo" height="72" />
 
-<h1>Atlas</h1>
+<h1>Atlas | Redlix</h1>
 
 <p>Internal developer operations platform for the Redlix ecosystem. Manage clients, projects, developer access, real-time communication, and audit logging from a unified interface.</p>
 
