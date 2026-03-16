@@ -1,7 +1,14 @@
 {
-  "name": "atlas-playground-project",
+  "name": "atlas-banking-demo",
   "version": "1.0.0",
+  "description": "Premium Banking App with SecureAuth AI Integration",
+  "main": "src/index.js",
   "scripts": {
-    "start": "node src/index.js"
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "secureauth-sdk": "latest"
   }
 }
